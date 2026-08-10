@@ -26,10 +26,6 @@ Before running the script, ensure:
 
 **Note:** If your remote control model is different from the one used in this guide, you will need to capture the codes for each button manually before remapping.
 
----
-
-## Capture the Button Codes
-
 Run the following command in your terminal to monitor remote control events in real time:
 
 ```bash
