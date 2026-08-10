@@ -124,12 +124,21 @@ adb -s YOUR_FIRE_TV_IP:5555 push firetv-remapper.sh /sdcard/
 
 ---
 
+** Note: I don't have Hulu and Disney+ apps installed on my firetv, so i don't need stop this processes when press buttons but maybe you need to avoid high RAM/CPU consume in background!
+
+remove comments on this lines to fix it:
+
+```bash
+# am force-stop "$HULU_PACKAGE" >/dev/null 2>&1
+# am force-stop "$DISNEY_PACKAGE" >/dev/null 2>&1
+```
+
+---
+
 ## 🚀 How to Run
 
 1. Make sure your Fire TV is turned on.
 2. Execute `run.bat` by double-clicking it.
 3. If a prompt appears on your Fire TV asking to **"Allow USB debugging?"**, check **"Always allow from this computer"** and select **OK**.
 4. You're ready to go!
-
----
 
