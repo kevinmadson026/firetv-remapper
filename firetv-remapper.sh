@@ -19,12 +19,17 @@ echo "$$" > "$PID_FILE"
 
 APP01_PACKAGE="org.smarttube.stable"
 APP02_PACKAGE="com.lazerplayer.app"
+APP03_PACKAGE="org.videolan.vlc"
+APP04_PACKAGE="com.esaba.downloader"
+
 
 PRIME_PACKAGE="com.amazon.firebat"
 NETFLIX_PACKAGE="com.netflix.ninja"
 
 TARGET_EVENT_PRIMEVIDEO="02e9"
 TARGET_EVENT_NETFLIX="02e8"
+TARGET_EVENT_DISNEY="02ea"
+TARGET_EVENT_HULU="02eb"
 
 # Função para localizar automaticamente o evento do controle remoto da Fire TV
 find_target_device() {
@@ -63,7 +68,7 @@ while true; do
     
     case "$line" in
         *" 0001 $TARGET_EVENT_PRIMEVIDEO 00000001"*)
-                echo "Botão SmartTube pressionado! Abrindo SmartTube..."
+                echo "Botão Primevideo pressionado! Abrindo App $APP01_PACKAGE..."
                 sleep 1
                 am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
                 am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
@@ -71,12 +76,32 @@ while true; do
                 monkey -p "$APP01_PACKAGE" -c android.intent.category.LAUNCHER 1
                 ;;
         *" 0001 $TARGET_EVENT_NETFLIX 00000001"*)
-                echo "Botão Netflix pressionado! Abrindo Lazer Play..."
+                echo "Botão Netflix pressionado! Abrindo App $APP02_PACKAGE..."
                 sleep 1
                 am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
                 am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
                 am force-stop "$APP01_PACKAGE" >/dev/null 2>&1
                 monkey -p "$APP02_PACKAGE" -c android.intent.category.LAUNCHER 1
                 ;;
+				
+		*" 0001 $TARGET_EVENT_DISNEY 00000001"*)
+                echo "Botão Disney+ pressionado! Abrindo App $APP03_PACKAGE..."
+                sleep 1
+                am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
+                am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
+                am force-stop "$APP01_PACKAGE" >/dev/null 2>&1
+				am force-stop "com.amazon.venezia" >/dev/null 2>&1
+                monkey -p "$APP03_PACKAGE" -c android.intent.category.LAUNCHER 1
+				;;
+				
+		*" 0001 $TARGET_EVENT_HULU 00000001"*)
+                echo "Botão Hulu pressionado! Abrindo App $APP04_PACKAGE..."
+                sleep 1
+                am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
+                am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
+                am force-stop "$APP01_PACKAGE" >/dev/null 2>&1
+				am force-stop "com.amazon.venezia" >/dev/null 2>&1
+                monkey -p "$APP04_PACKAGE" -c android.intent.category.LAUNCHER 1
+				;;
     esac
 done
