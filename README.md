@@ -36,7 +36,9 @@ Before running the script, ensure:
 
 Run the following command in your terminal to monitor remote control events in real time:
 
+```bash
 adb -s YOUR_FIRE_TV_IP:5555 shell "getevent"
+```
 
 Next, press the buttons on your remote control that you wish to remap and observe the event codes printed in the terminal output.
 Once you have identified the code corresponding to each button in the logs, update the variable values in your script accordingly:
