@@ -69,35 +69,63 @@ find_target_device() {
 TARGET_DEVICE=$(find_target_device)
 echo "Monitoring clicks on firetv remote: $TARGET_DEVICE"
 
+LOCK_FILE="/sdcard/firetv-remapper.lock"
+
 while true; do
     line=$(getevent -t -c 2 "$TARGET_DEVICE" 2>/dev/null)
     
     case "$line" in
         *" 0001 $TARGET_EVENT_PRIMEVIDEO 00000001"*)
-                echo "Primevideo Button pressed! Opening App $APP01_PACKAGE..."
+                touch "$LOCK_FILE"
+                echo "Primevideo button pressed! Opening app $APP01_PACKAGE..."
                 sleep 1
-				close_background_apps
+                am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
+                am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
+                am force-stop "$APP02_PACKAGE" >/dev/null 2>&1
+                am force-stop "$APP03_PACKAGE" >/dev/null 2>&1
+                am force-stop "$APP04_PACKAGE" >/dev/null 2>&1
                 monkey -p "$APP01_PACKAGE" -c android.intent.category.LAUNCHER 1
+                rm -f "$LOCK_FILE"
                 ;;
         *" 0001 $TARGET_EVENT_NETFLIX 00000001"*)
-                echo "Netflix Button pressed! Opening App $APP02_PACKAGE..."
+                touch "$LOCK_FILE"
+                echo "Netflix button pressed! Opening app $APP02_PACKAGE..."
                 sleep 1
-				close_background_apps
+                am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
+                am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
+                am force-stop "$APP01_PACKAGE" >/dev/null 2>&1
+                am force-stop "$APP03_PACKAGE" >/dev/null 2>&1
+                am force-stop "$APP04_PACKAGE" >/dev/null 2>&1
                 monkey -p "$APP02_PACKAGE" -c android.intent.category.LAUNCHER 1
+                rm -f "$LOCK_FILE"
                 ;;
-				
-		*" 0001 $TARGET_EVENT_DISNEY 00000001"*)
-                echo "Disney+ Button pressed! Opening App  $APP03_PACKAGE..."
+                
+        *" 0001 $TARGET_EVENT_DISNEY 00000001"*)
+                touch "$LOCK_FILE"
+                echo "Disney+ button pressed! Opening app $APP03_PACKAGE..."
                 sleep 1
-				close_background_apps
+                am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
+                am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
+                am force-stop "$APP01_PACKAGE" >/dev/null 2>&1
+                am force-stop "$APP02_PACKAGE" >/dev/null 2>&1
+                am force-stop "$APP04_PACKAGE" >/dev/null 2>&1
+                am force-stop "com.amazon.venezia" >/dev/null 2>&1
                 monkey -p "$APP03_PACKAGE" -c android.intent.category.LAUNCHER 1
-				;;
-				
-		*" 0001 $TARGET_EVENT_HULU 00000001"*)
-                echo "Hulu Button pressed! Opening App $APP04_PACKAGE..."
+                rm -f "$LOCK_FILE"
+                ;;
+                
+        *" 0001 $TARGET_EVENT_HULU 00000001"*)
+                touch "$LOCK_FILE"
+                echo "Hulu button pressed! Opening app $APP04_PACKAGE..."
                 sleep 1
-				close_background_apps
+                am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
+                am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
+                am force-stop "$APP01_PACKAGE" >/dev/null 2>&1
+                am force-stop "$APP02_PACKAGE" >/dev/null 2>&1
+                am force-stop "$APP03_PACKAGE" >/dev/null 2>&1
+                am force-stop "com.amazon.venezia" >/dev/null 2>&1
                 monkey -p "$APP04_PACKAGE" -c android.intent.category.LAUNCHER 1
-				;;
+                rm -f "$LOCK_FILE"
+                ;;
     esac
 done
