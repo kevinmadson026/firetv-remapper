@@ -11,7 +11,7 @@ A lightweight utility script to remap dedicated app buttons on your Amazon Fire 
 
 * **Prime Video Button:** Remapped to open **SmartTube** (`org.smarttube.stable`) by default.
 * **Netflix Button:** Remapped to open **LazerPlay** (`com.lazerplayer.app`) by default.
-* **Disney Button:** Remapped to open **Vlc** (`org.videolan.vlc`) by default.
+* **Disney Button:** Remapped to open **VLC** (`org.videolan.vlc`) by default.
 * **Hulu Button:** Remapped to open **Downloader** (`com.esaba.downloader`) by default.
 * **Fully Customizable:** Easily change the target applications by editing package names.
 * **Keep-Alive Manager:** Script to keep the Fire TV process running continuously.
