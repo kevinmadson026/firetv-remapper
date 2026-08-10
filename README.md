@@ -7,7 +7,6 @@ You can edit this by entering the name of the package you want to open in the fi
 On the line:
 
 APP01_PACKAGE="org.smarttube.stable"
-
 APP02_PACKAGE="com.lazerplayer.app"
 
 replace these with the package names you want.
