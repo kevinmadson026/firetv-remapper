@@ -91,8 +91,8 @@ Open `firetv-remapper.sh` in a text editor and update the target package names:
 ```bash
 APP01_PACKAGE="org.smarttube.stable" # Target app for Prime Video button
 APP02_PACKAGE="com.lazerplayer.app"  # Target app for Netflix button
-APP03_PACKAGE="org.videolan.vlc"     #Target app for Disney plus button
-APP04_PACKAGE="com.esaba.downloader" #Target app for Disney plus button
+APP03_PACKAGE="org.videolan.vlc"     # Target app for Disney+ button
+APP04_PACKAGE="com.esaba.downloader" # Target app for Hulu button
 ```
 
 ### 3. Transfer the Script File to Fire TV
