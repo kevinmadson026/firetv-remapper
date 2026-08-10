@@ -25,6 +25,8 @@ APP04_PACKAGE="com.esaba.downloader"
 
 PRIME_PACKAGE="com.amazon.firebat"
 NETFLIX_PACKAGE="com.netflix.ninja"
+DISNEY_PACKAGE="com.disney.disneyplus"
+HULU_PACKAGE="com.hulu.livingroomplus"
 
 TARGET_EVENT_PRIMEVIDEO="02e9"
 TARGET_EVENT_NETFLIX="02e8"
@@ -72,6 +74,8 @@ while true; do
                 sleep 1
                 am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
                 am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
+				# am force-stop "$HULU_PACKAGE" >/dev/null 2>&1
+				# am force-stop "$DISNEY_PACKAGE" >/dev/null 2>&1
                 am force-stop "$APP02_PACKAGE" >/dev/null 2>&1
 				am force-stop "$APP03_PACKAGE" >/dev/null 2>&1
 				am force-stop "$APP04_PACKAGE" >/dev/null 2>&1
@@ -82,6 +86,9 @@ while true; do
                 sleep 1
                 am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
                 am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
+				# am force-stop "$HULU_PACKAGE" >/dev/null 2>&1
+				# am force-stop "$DISNEY_PACKAGE" >/dev/null 2>&1
+				
                 am force-stop "$APP01_PACKAGE" >/dev/null 2>&1
 				am force-stop "$APP03_PACKAGE" >/dev/null 2>&1
 				am force-stop "$APP04_PACKAGE" >/dev/null 2>&1
@@ -93,6 +100,8 @@ while true; do
                 sleep 1
                 am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
                 am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
+				# am force-stop "$HULU_PACKAGE" >/dev/null 2>&1
+				# am force-stop "$DISNEY_PACKAGE" >/dev/null 2>&1
                 am force-stop "$APP01_PACKAGE" >/dev/null 2>&1
 				am force-stop "$APP02_PACKAGE" >/dev/null 2>&1
 				am force-stop "$APP04_PACKAGE" >/dev/null 2>&1
@@ -105,6 +114,8 @@ while true; do
                 sleep 1
                 am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
                 am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
+				# am force-stop "$HULU_PACKAGE" >/dev/null 2>&1
+				# am force-stop "$DISNEY_PACKAGE" >/dev/null 2>&1
                 am force-stop "$APP01_PACKAGE" >/dev/null 2>&1
 				am force-stop "$APP02_PACKAGE" >/dev/null 2>&1
 				am force-stop "$APP03_PACKAGE" >/dev/null 2>&1
