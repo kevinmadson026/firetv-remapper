@@ -1,3 +1,11 @@
+How to install:
+
+don't need to install but need enable ADB on FireTv Stick previously and change Ip address on file run.bat: 
+
+set IP_ADDRESS=192.168.1.7:5555
+
+How to run:
+
 Functions:
 
 - Remap the “Prime Video” and “Netflix” buttons on the remote control to open the Smartube and LazerPlay apps instead.
