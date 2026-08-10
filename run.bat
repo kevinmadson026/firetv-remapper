@@ -1,9 +1,12 @@
 @echo off
-title FireTV Remapper - Gerenciador
+title FireTV Remapper - Gerenciador Inteligente
 color 0C
 
 :: Defina o IP do Fire TV aqui:
 set IP_ADDRESS=192.168.1.7:5555
+
+:: Contador para reinicialização preventiva (evita o travamento de 10 min)
+set /a COUNTER=0
 
 :: 1. Garante a conexao ADB primeiro
 adb connect %IP_ADDRESS% >nul 2>&1
@@ -44,13 +47,27 @@ if errorlevel 1 set STATUS=ERRO
 adb -s %IP_ADDRESS% shell "pgrep -f getevent" >nul 2>&1
 if errorlevel 1 set STATUS=ERRO
 
-:: Processa a decisao com base nos testes (CORRIGIDO: Aponta corretamente para o .sh)
+:: Incrementa o contador (cada ciclo tem 30 segundos)
+:: 10 ciclos * 30 segundos = 5 minutos
+set /a COUNTER+=1
+if %COUNTER% lss 10 goto prosseguir
+echo [%TIME%] Realizando reinicializacao preventiva periodica (5 min)...
+set STATUS=REINICIAR
+set /a COUNTER=0
+
+:prosseguir
+
+:: Processa a decisao com base nos testes
 if "%STATUS%"=="ERRO" (
     echo [%TIME%] Script ou getevent parou. Reiniciando...
     adb -s %IP_ADDRESS% shell "pkill -f firetv-remapper; pkill -f getevent" >nul 2>&1
     adb -s %IP_ADDRESS% shell "nohup sh /sdcard/firetv-remapper.sh > /sdcard/firetv-remapper.log 2>&1 &"
+) else if "%STATUS%"=="REINICIAR" (
+    echo [%TIME%] Reiniciando o script preventivamente para evitar ociosidade do FireOS...
+    adb -s %IP_ADDRESS% shell "pkill -f firetv-remapper; pkill -f getevent" >nul 2>&1
+    adb -s %IP_ADDRESS% shell "nohup sh /sdcard/firetv-remapper.sh > /sdcard/firetv-remapper.log 2>&1 &"
 ) else (
-    echo [%TIME%] Script e getevent estao rodando perfeitamente.
+    echo [%TIME%] Script e getevent estao rodando perfeitamente. (Ciclo %COUNTER%/10)
 )
 
 :: Aguarda 30 segundos antes de verificar novamente
