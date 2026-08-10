@@ -17,13 +17,16 @@ pkill getevent >/dev/null 2>&1
 # 3. Grava o PID da nova instância atual
 echo "$$" > "$PID_FILE"
 
-APP_PACKAGE=${1:-"org.smarttube.stable"}
+APP01_PACKAGE="org.smarttube.stable"
+APP02_PACKAGE="com.lazerplayer.app"
+#APP03_PACKAGE=""
+#APP04_PACKAGE=""
+
 PRIME_PACKAGE="com.amazon.firebat"
 NETFLIX_PACKAGE="com.netflix.ninja"
-LAZER_PACKAGE="com.lazerplayer.app"
 
 TARGET_DEVICE="/dev/input/event4"
-TARGET_EVENT_SMARTTUBE="02e9"
+TARGET_EVENT_PRIMEVIDEO="02e9"
 TARGET_EVENT_NETFLIX="02e8"
 
 echo "Monitorando eventos de tecla no dispositivo $TARGET_DEVICE para abrir: $APP_PACKAGE"
@@ -34,13 +37,13 @@ while true; do
     line=$(getevent -t -c 2 "$TARGET_DEVICE")
     
     case "$line" in
-        *" 0001 $TARGET_EVENT_SMARTTUBE 00000001"*)
+        *" 0001 $TARGET_EVENT_PRIMEVIDEO 00000001"*)
                 echo "Botão SmartTube pressionado! Abrindo $APP_PACKAGE..."
                 sleep 1
                 am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
                 am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
-                am force-stop "$LAZER_PACKAGE" >/dev/null 2>&1
-                monkey -p "$APP_PACKAGE" -c android.intent.category.LAUNCHER 1
+                am force-stop "$APP02_PACKAGE" >/dev/null 2>&1
+                monkey -p "$APP01_PACKAGE" -c android.intent.category.LAUNCHER 1
                 ;;
         *" 0001 $TARGET_EVENT_NETFLIX 00000001"*)
                 echo "Botão Netflix pressionado! Abrindo Lazer Play..."
@@ -48,7 +51,7 @@ while true; do
                 am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
                 am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
                 am force-stop "org.smarttube.stable" >/dev/null 2>&1
-                monkey -p "$LAZER_PACKAGE" -c android.intent.category.LAUNCHER 1
+                monkey -p "$APP02_PACKAGE" -c android.intent.category.LAUNCHER 1
                 ;;
     esac
 done
