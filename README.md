@@ -112,5 +112,4 @@ adb -s YOUR_FIRE_TV_IP:5555 push firetv-remapper.sh /sdcard/
 
 ## 📌 To-Do / Roadmap
 
-* [ ] Add support for remapping **Disney+** button
-* [ ] Add support for remapping **Hulu** button
+* [ ] Add support for remapping **Disney+** and **Hulu** button
