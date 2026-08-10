@@ -26,6 +26,28 @@ Before running the script, ensure:
 
 ---
 
+# 📌 How to Identify Your Remote Control Button Codes
+
+**Note:** If your remote control model is different from the one used in this guide, you will need to capture the codes for each button manually before remapping.
+
+---
+
+## 1. Capture the Button Codes
+
+Run the following command in your terminal to monitor remote control events in real time:
+
+adb -s YOUR_FIRE_TV_IP:5555 shell "getevent"
+
+Next, press the buttons on your remote control that you wish to remap and observe the event codes printed in the terminal output.
+Once you have identified the code corresponding to each button in the logs, update the variable values in your script accordingly:
+
+```bash
+TARGET_EVENT_PRIMEVIDEO="02e9"
+TARGET_EVENT_NETFLIX="02e8"
+TARGET_EVENT_DISNEY="02ea"
+TARGET_EVENT_HULU="02eb"
+```
+
 ## ⚙️ Step 1: Enable ADB Debugging on Fire TV
 
 Follow these steps to enable ADB Debugging and locate your IP address:
