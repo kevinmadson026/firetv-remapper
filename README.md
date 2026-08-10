@@ -24,15 +24,11 @@ Before running the script, ensure:
 1. Your PC and Fire TV Stick are connected to the **same local Wi-Fi network**.
 2. **ADB Debugging** is enabled on your Fire TV Stick.
 
----
-
-# 📌 How to Identify Your Remote Control Button Codes
-
 **Note:** If your remote control model is different from the one used in this guide, you will need to capture the codes for each button manually before remapping.
 
 ---
 
-## 1. Capture the Button Codes
+## Capture the Button Codes
 
 Run the following command in your terminal to monitor remote control events in real time:
 
