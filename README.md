@@ -70,9 +70,7 @@ You can install an app like **Background Apps and Processes** or **App Inspector
 
 ---
 
-## 🛠️ Configuration & Installation
-
-No complex installation is needed. Simply configure your target IP and app packages:
+## 🛠️ Configuration & Setup
 
 ### 1. Set Your IP Address
 Open `run.bat` in a text editor (e.g., Notepad) and update the `IP_ADDRESS` variable with your Fire TV's IP:
@@ -81,12 +79,23 @@ Open `run.bat` in a text editor (e.g., Notepad) and update the `IP_ADDRESS` vari
 set IP_ADDRESS=192.168.1.7:5555
 ```
 
-### 2. (Optional) Customize Apps
+### 2. (Optional) Customize Target Apps
 Open `firetv-remapper.sh` in a text editor and update the target package names:
 
 ```bash
 APP01_PACKAGE="org.smarttube.stable" # Target app for Prime Video button
 APP02_PACKAGE="com.lazerplayer.app"  # Target app for Netflix button
+```
+
+### 3. Transfer the Script File to Fire TV
+Before executing the script, push `firetv-remapper.sh` to your Fire TV's internal storage (`/sdcard/`):
+
+```bash
+# Connect to Fire TV
+adb connect YOUR_FIRE_TV_IP:5555
+
+# Push the remapper script to the Fire TV internal storage
+adb -s YOUR_FIRE_TV_IP:5555 push firetv-remapper.sh /sdcard/
 ```
 
 ---
