@@ -50,7 +50,7 @@ while true; do
                 sleep 1
                 am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
                 am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
-                am force-stop "org.smarttube.stable" >/dev/null 2>&1
+                am force-stop "$APP01_PACKAGE" >/dev/null 2>&1
                 monkey -p "$APP02_PACKAGE" -c android.intent.category.LAUNCHER 1
                 ;;
     esac
