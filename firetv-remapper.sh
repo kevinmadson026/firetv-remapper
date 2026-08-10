@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Fire TV Key Remapper - Versão Definitiva por Colunas
+# Fire TV Key Remapper - Versão com Busca Dinâmica de Dispositivo
 PID_FILE="/sdcard/firetv-remapper.pid"
 
 # 1. Encerra a instância anterior do script de forma segura (se existir)
@@ -19,26 +19,51 @@ echo "$$" > "$PID_FILE"
 
 APP01_PACKAGE="org.smarttube.stable"
 APP02_PACKAGE="com.lazerplayer.app"
-#APP03_PACKAGE=""
-#APP04_PACKAGE=""
 
 PRIME_PACKAGE="com.amazon.firebat"
 NETFLIX_PACKAGE="com.netflix.ninja"
 
-TARGET_DEVICE="/dev/input/event4"
 TARGET_EVENT_PRIMEVIDEO="02e9"
 TARGET_EVENT_NETFLIX="02e8"
 
-echo "Monitorando eventos de tecla no dispositivo $TARGET_DEVICE para abrir: $APP_PACKAGE"
+# Função para localizar automaticamente o evento do controle remoto da Fire TV
+find_target_device() {
+    # Primeira tentativa: Busca exata pelo nome exato do controle
+    for dev in /dev/input/event*; do
+        if [ -e "$dev" ]; then
+            name=$(getevent -i "$dev" 2>/dev/null)
+            if echo "$name" | grep -qi "Amazon Fire TV Remote"; then
+                echo "$dev"
+                return 0
+            fi
+        fi
+    done
+
+    # Segunda tentativa: Busca genérica mais restrita (sem gpio-keys)
+    for dev in /dev/input/event*; do
+        if [ -e "$dev" ]; then
+            name=$(getevent -i "$dev" 2>/dev/null)
+            if echo "$name" | grep -qiE "firetv|fire tv|amazon.*remote"; then
+                echo "$dev"
+                return 0
+            fi
+        fi
+    done
+
+    # Fallback seguro para o event4 encontrado nos seus testes
+    echo "/dev/input/event4"
+}
+
+TARGET_DEVICE=$(find_target_device)
+echo "Monitorando eventos de tecla no dispositivo detectado: $TARGET_DEVICE"
 
 while true; do
-    # O '-c 2' captura o pacote exato do pressionamento e fecha na mesma hora,
-    # eliminando o atraso do buffer e pegando a tecla Home.
-    line=$(getevent -t -c 2 "$TARGET_DEVICE")
+    # O '-c 2' captura o pacote exato do pressionamento e fecha na mesma hora
+    line=$(getevent -t -c 2 "$TARGET_DEVICE" 2>/dev/null)
     
     case "$line" in
         *" 0001 $TARGET_EVENT_PRIMEVIDEO 00000001"*)
-                echo "Botão SmartTube pressionado! Abrindo $APP_PACKAGE..."
+                echo "Botão SmartTube pressionado! Abrindo SmartTube..."
                 sleep 1
                 am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
                 am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
