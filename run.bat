@@ -27,8 +27,9 @@ adb -s %IP_ADDRESS% shell "touch /sdcard/firetv-remapper.log; pkill -f firetv-re
 adb -s %IP_ADDRESS% shell "nohup sh /sdcard/firetv-remapper.sh > /sdcard/firetv-remapper.log 2>&1 &"
 
 :: 5. Abre uma nova janela separada APENAS UMA VEZ com o log em tempo real
-start "FireTV - Log em Tempo Real" cmd /k "for /L %i in (1,0,2) do (adb connect 192.168.1.7:5555 & adb -s 192.168.1.7:5555 shell tail -f /sdcard/firetv-remapper.log & timeout /t 2)"
 :: start "FireTV - Log em Tempo Real" cmd /k "adb -s %IP_ADDRESS% shell tail -f /sdcard/firetv-remapper.log"
+
+start "FireTV - Log em Tempo Real" cmd /k "for /L %%i in (1,0,2) do (adb connect 192.168.1.7:5555 & adb -s 192.168.1.7:5555 shell tail -f /sdcard/firetv-remapper.log & timeout /t 2)"
 
 :loop
 cls
