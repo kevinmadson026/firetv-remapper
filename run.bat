@@ -53,7 +53,7 @@ if "%STATUS%"=="ERROR" (
     adb -s %IP_ADDRESS% shell "pkill -f firetv-remapper; pkill -f getevent" >nul 2>&1
     adb -s %IP_ADDRESS% shell "nohup sh /sdcard/firetv-remapper.sh > /sdcard/firetv-remapper.log 2>&1 &"
 ) else (
-    echo [%TIME%] Script e getevent is running. (%COUNTER%/10)
+    echo [%TIME%] Script and getevent is running OK. (%COUNTER%/10)
 )
 
 timeout /t 30 /nobreak >nul
