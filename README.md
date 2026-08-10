@@ -1,4 +1,4 @@
-readme_content = """# Fire TV Remote Button Remapper
+# Fire TV Remote Button Remapper
 
 A lightweight utility script to remap dedicated app buttons on your Amazon Fire TV Stick remote control to open your preferred custom applications.
 
@@ -56,3 +56,51 @@ adb shell pm list packages
 
 # Search for a specific app (e.g., YouTube or Spotify)
 adb shell pm list packages | grep -i "youtube"
+```
+
+### Method 2: Via Web Browser / URL
+Search for the app on the Google Play Store web version or an app repository (like APKMirror/APKPure):
+1. Open the app page in a web browser.
+2. Look at the URL for the `id=` parameter.
+   * Example URL: `https://play.google.com/store/apps/details?id=com.spotify.tv.android`
+   * The package name is **`com.spotify.tv.android`**.
+
+### Method 3: Using Fire TV Apps
+You can install an app like **Background Apps and Processes** or **App Inspector** directly on your Fire TV via the Amazon Appstore to view exact package names.
+
+---
+
+## 🛠️ Configuration & Installation
+
+No complex installation is needed. Simply configure your target IP and app packages:
+
+### 1. Set Your IP Address
+Open `run.bat` in a text editor (e.g., Notepad) and update the `IP_ADDRESS` variable with your Fire TV's IP:
+
+```bat
+set IP_ADDRESS=192.168.1.7:5555
+```
+
+### 2. (Optional) Customize Apps
+Open `firetv-remapper.sh` in a text editor and update the target package names:
+
+```bash
+APP01_PACKAGE="org.smarttube.stable" # Target app for Prime Video button
+APP02_PACKAGE="com.lazerplayer.app"  # Target app for Netflix button
+```
+
+---
+
+## 🚀 How to Run
+
+1. Make sure your Fire TV is turned on.
+2. Execute `run.bat` by double-clicking it.
+3. If a prompt appears on your Fire TV asking to **"Allow USB debugging?"**, check **"Always allow from this computer"** and select **OK**.
+4. You're ready to go!
+
+---
+
+## 📌 To-Do / Roadmap
+
+* [ ] Add support for remapping **Disney+** button
+* [ ] Add support for remapping **Hulu** button
