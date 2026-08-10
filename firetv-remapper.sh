@@ -33,6 +33,19 @@ TARGET_EVENT_NETFLIX="02e8"
 TARGET_EVENT_DISNEY="02ea"
 TARGET_EVENT_HULU="02eb"
 
+# Função para fechar os aplicativos antes de abrir o novo
+close_background_apps() {
+    am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
+    am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
+	# am force-stop "$HULU_PACKAGE" >/dev/null 2>&1
+	# am force-stop "$DISNEY_PACKAGE" >/dev/null 2>&1
+    am force-stop "$APP01_PACKAGE" >/dev/null 2>&1
+    am force-stop "$APP02_PACKAGE" >/dev/null 2>&1
+    am force-stop "$APP03_PACKAGE" >/dev/null 2>&1
+    am force-stop "$APP04_PACKAGE" >/dev/null 2>&1
+    am force-stop "com.amazon.venezia" >/dev/null 2>&1
+}
+
 # Função para localizar automaticamente o evento do controle remoto da Fire TV
 find_target_device() {
     # Primeira tentativa: Busca exata pelo nome exato do controle
@@ -72,54 +85,27 @@ while true; do
         *" 0001 $TARGET_EVENT_PRIMEVIDEO 00000001"*)
                 echo "Botão Primevideo pressionado! Abrindo App $APP01_PACKAGE..."
                 sleep 1
-                am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
-                am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
-				# am force-stop "$HULU_PACKAGE" >/dev/null 2>&1
-				# am force-stop "$DISNEY_PACKAGE" >/dev/null 2>&1
-                am force-stop "$APP02_PACKAGE" >/dev/null 2>&1
-				am force-stop "$APP03_PACKAGE" >/dev/null 2>&1
-				am force-stop "$APP04_PACKAGE" >/dev/null 2>&1
+				close_background_apps
                 monkey -p "$APP01_PACKAGE" -c android.intent.category.LAUNCHER 1
                 ;;
         *" 0001 $TARGET_EVENT_NETFLIX 00000001"*)
                 echo "Botão Netflix pressionado! Abrindo App $APP02_PACKAGE..."
                 sleep 1
-                am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
-                am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
-				# am force-stop "$HULU_PACKAGE" >/dev/null 2>&1
-				# am force-stop "$DISNEY_PACKAGE" >/dev/null 2>&1
-				
-                am force-stop "$APP01_PACKAGE" >/dev/null 2>&1
-				am force-stop "$APP03_PACKAGE" >/dev/null 2>&1
-				am force-stop "$APP04_PACKAGE" >/dev/null 2>&1
+				close_background_apps
                 monkey -p "$APP02_PACKAGE" -c android.intent.category.LAUNCHER 1
                 ;;
 				
 		*" 0001 $TARGET_EVENT_DISNEY 00000001"*)
                 echo "Botão Disney+ pressionado! Abrindo App $APP03_PACKAGE..."
                 sleep 1
-                am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
-                am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
-				# am force-stop "$HULU_PACKAGE" >/dev/null 2>&1
-				# am force-stop "$DISNEY_PACKAGE" >/dev/null 2>&1
-                am force-stop "$APP01_PACKAGE" >/dev/null 2>&1
-				am force-stop "$APP02_PACKAGE" >/dev/null 2>&1
-				am force-stop "$APP04_PACKAGE" >/dev/null 2>&1
-				am force-stop "com.amazon.venezia" >/dev/null 2>&1
+				close_background_apps
                 monkey -p "$APP03_PACKAGE" -c android.intent.category.LAUNCHER 1
 				;;
 				
 		*" 0001 $TARGET_EVENT_HULU 00000001"*)
                 echo "Botão Hulu pressionado! Abrindo App $APP04_PACKAGE..."
                 sleep 1
-                am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
-                am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
-				# am force-stop "$HULU_PACKAGE" >/dev/null 2>&1
-				# am force-stop "$DISNEY_PACKAGE" >/dev/null 2>&1
-                am force-stop "$APP01_PACKAGE" >/dev/null 2>&1
-				am force-stop "$APP02_PACKAGE" >/dev/null 2>&1
-				am force-stop "$APP03_PACKAGE" >/dev/null 2>&1
-				am force-stop "com.amazon.venezia" >/dev/null 2>&1
+				close_background_apps
                 monkey -p "$APP04_PACKAGE" -c android.intent.category.LAUNCHER 1
 				;;
     esac
