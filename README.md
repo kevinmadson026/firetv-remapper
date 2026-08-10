@@ -126,7 +126,7 @@ adb -s YOUR_FIRE_TV_IP:5555 push firetv-remapper.sh /sdcard/
 
 ** Note: I don't have Hulu and Disney+ apps installed on my firetv, so i don't need stop this processes when press buttons but maybe you need to avoid high RAM/CPU consume in background!
 
-remove comments on this lines to fix it:
+remove all comments on this lines to fix it:
 
 ```bash
 # am force-stop "$HULU_PACKAGE" >/dev/null 2>&1
