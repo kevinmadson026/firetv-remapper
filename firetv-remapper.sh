@@ -73,6 +73,8 @@ while true; do
                 am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
                 am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
                 am force-stop "$APP02_PACKAGE" >/dev/null 2>&1
+				am force-stop "$APP03_PACKAGE" >/dev/null 2>&1
+				am force-stop "$APP04_PACKAGE" >/dev/null 2>&1
                 monkey -p "$APP01_PACKAGE" -c android.intent.category.LAUNCHER 1
                 ;;
         *" 0001 $TARGET_EVENT_NETFLIX 00000001"*)
@@ -81,6 +83,8 @@ while true; do
                 am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
                 am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
                 am force-stop "$APP01_PACKAGE" >/dev/null 2>&1
+				am force-stop "$APP03_PACKAGE" >/dev/null 2>&1
+				am force-stop "$APP04_PACKAGE" >/dev/null 2>&1
                 monkey -p "$APP02_PACKAGE" -c android.intent.category.LAUNCHER 1
                 ;;
 				
@@ -90,6 +94,8 @@ while true; do
                 am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
                 am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
                 am force-stop "$APP01_PACKAGE" >/dev/null 2>&1
+				am force-stop "$APP02_PACKAGE" >/dev/null 2>&1
+				am force-stop "$APP04_PACKAGE" >/dev/null 2>&1
 				am force-stop "com.amazon.venezia" >/dev/null 2>&1
                 monkey -p "$APP03_PACKAGE" -c android.intent.category.LAUNCHER 1
 				;;
@@ -100,6 +106,8 @@ while true; do
                 am force-stop "$PRIME_PACKAGE" >/dev/null 2>&1
                 am force-stop "$NETFLIX_PACKAGE" >/dev/null 2>&1
                 am force-stop "$APP01_PACKAGE" >/dev/null 2>&1
+				am force-stop "$APP02_PACKAGE" >/dev/null 2>&1
+				am force-stop "$APP03_PACKAGE" >/dev/null 2>&1
 				am force-stop "com.amazon.venezia" >/dev/null 2>&1
                 monkey -p "$APP04_PACKAGE" -c android.intent.category.LAUNCHER 1
 				;;
