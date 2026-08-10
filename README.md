@@ -6,6 +6,8 @@ set IP_ADDRESS=192.168.1.7:5555
 
 How to run:
 
+execute run.bat and you are ready to go.
+
 Functions:
 
 - Remap the “Prime Video” and “Netflix” buttons on the remote control to open the Smartube and LazerPlay apps instead.
