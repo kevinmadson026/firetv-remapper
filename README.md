@@ -2,8 +2,7 @@
 
 A lightweight utility script to remap dedicated app buttons on your Amazon Fire TV Stick remote control to open your preferred custom applications.
 
-<img width="224" height="365" alt="images (4)" src="https://github.com/user-attachments/assets/377983f0-aa08-4f6e-b8de-720c8664aa5a" />
-
+<img width="224" height="365" alt="Fire TV Remote" src="https://github.com/user-attachments/assets/377983f0-aa08-4f6e-b8de-720c8664aa5a" />
 
 ---
 
@@ -13,8 +12,19 @@ A lightweight utility script to remap dedicated app buttons on your Amazon Fire 
 * **Netflix Button:** Remapped to open **LazerPlay** (`com.lazerplayer.app`) by default.
 * **Disney Button:** Remapped to open **VLC** (`org.videolan.vlc`) by default.
 * **Hulu Button:** Remapped to open **Downloader** (`com.esaba.downloader`) by default.
-* **Fully Customizable:** Easily change the target applications by editing package names.
-* **Keep-Alive Manager:** Script to keep the Fire TV process running continuously.
+* **Keep-Alive Manager:** Host PC background monitor to ensure non-stop key interception.
+* **Fully Customizable:** Easily change target applications or capture new button event codes.
+
+---
+
+## 💡 How It Works & Architecture
+
+> **Important:** This script runs **on your computer** (Host PC), which communicates with your Fire TV via ADB.
+
+Because Amazon Fire OS aggressively manages memory and frequently kills background user processes running locally on the TV, `run.bat` operates directly from your PC:
+1. **Continuous Monitoring:** It maintains an active ADB bridge connection to capture remote control keypress events in real time.
+2. **Preventive Restarts:** To prevent Fire OS or socket timeouts from killing the event listener, the host script performs continuous health checks and **automatically restarts the monitoring loop every 3 minutes**.
+3. **PC Execution Requirement:** Your PC must remain turned on and connected to the same local network for the button remapping service to remain active.
 
 ---
 
@@ -24,16 +34,14 @@ Before running the script, ensure:
 1. Your PC and Fire TV Stick are connected to the **same local Wi-Fi network**.
 2. **ADB Debugging** is enabled on your Fire TV Stick.
 
-**Note:** If your remote control model is different from the one used in this guide, MAYBE you need to capture the codes for each button manually before remapping.
-
-Run the following command in your terminal to monitor remote control events in real time:
+### Manual Event Code Capture (Optional)
+If your remote control model differs from the standard layout, you can capture button codes manually:
 
 ```bash
 adb -s YOUR_FIRE_TV_IP:5555 shell "getevent"
 ```
 
-Next, press the buttons on your remote control that you wish to remap and observe the event codes printed in the terminal output.
-Once you have identified the code corresponding to each button in the logs, update the variable values in your script accordingly:
+Press the dedicated app buttons on your remote control and observe the terminal output. Update the target event codes in `firetv-remapper.sh`:
 
 ```bash
 TARGET_EVENT_PRIMEVIDEO="02e9"
@@ -42,67 +50,56 @@ TARGET_EVENT_DISNEY="02ea"
 TARGET_EVENT_HULU="02eb"
 ```
 
+---
+
 ## ⚙️ Step 1: Enable ADB Debugging on Fire TV
 
-Follow these steps to enable ADB Debugging and locate your IP address:
-
-### 1. Enable Developer Options
-1. On your Fire TV, go to **Settings** ⚙️ > **My Fire TV** > **About**.
-2. Highlight your device name (e.g., *Fire TV Stick*) and press the **Select button on your remote 7 times rapidly**.
-3. You will see a prompt saying: *"No need, you are already a developer."*
-
-### 2. Turn on ADB Debugging
-1. Press **Back** to return to **My Fire TV**.
-2. Select **Developer Options**.
-3. Turn **ADB Debugging** to **ON**.
-
-### 3. Find Your Fire TV IP Address
-1. Go to **Settings** ⚙️ > **My Fire TV** > **About** > **Network**.
-2. Note down the **IP Address** displayed on the right (e.g., `192.168.1.7`).
+1. **Enable Developer Options:**
+   * Go to **Settings** ⚙️ > **My Fire TV** > **About**.
+   * Highlight your device name and press the **Select button 7 times rapidly** until you see *"No need, you are already a developer."*
+2. **Turn on ADB Debugging:**
+   * Return to **My Fire TV** > **Developer Options**.
+   * Set **ADB Debugging** to **ON**.
+3. **Find Your Fire TV IP Address:**
+   * Go to **Settings** ⚙️ > **My Fire TV** > **About** > **Network**.
+   * Note down the displayed **IP Address** (e.g., `192.168.1.7`).
 
 ---
 
 ## 🔍 How to Find App Package Names
 
-To remap buttons to a different app, you need its exact package name (e.g., `com.netflix.ninja` or `org.smarttube.stable`). Here are two easy ways to find it:
+To remap buttons to a different application, you need its exact Android package name (e.g., `org.smarttube.stable`).
 
-### Method 1: Using ADB (Fastest)
-If you have ADB installed on your computer, connect to your Fire TV and list installed packages:
-
+### Method 1: Via ADB (Fastest)
 ```bash
 # Connect to your Fire TV
 adb connect YOUR_FIRE_TV_IP:5555
 
-# List all installed packages
-adb shell pm list packages
-
-# Search for a specific app (e.g., YouTube or Spotify)
+# List installed packages matching a keyword
 adb shell pm list packages | grep -i "youtube"
 ```
 
-### Method 2: Via Web Browser / URL
-Search for the app on the Google Play Store web version or an app repository (like APKMirror/APKPure):
-1. Open the app page in a web browser.
-2. Look at the URL for the `id=` parameter.
-   * Example URL: `https://play.google.com/store/apps/details?id=com.spotify.tv.android`
-   * The package name is **`com.spotify.tv.android`**.
+### Method 2: Web Browser URL
+Find the application page on the Google Play Store or APKMirror and locate the `id=` parameter in the URL:
+* `https://play.google.com/store/apps/details?id=com.spotify.tv.android` $
+ightarrow$ **`com.spotify.tv.android`**
 
 ### Method 3: Using Fire TV Apps
-You can install an app like **Background Apps and Processes** or **App Inspector** directly on your Fire TV via the Amazon Appstore to view exact package names.
+You can install apps like **Background Apps and Processes** or **App Inspector** directly on your Fire TV to inspect package names.
 
 ---
 
 ## 🛠️ Configuration & Setup
 
-### 1. Set Your IP Address
-Open `run.bat` in a text editor (e.g., Notepad) and update the `IP_ADDRESS` variable with your Fire TV's IP:
+### 1. Set Your Fire TV IP Address
+Open `run.bat` on your PC using a text editor (e.g., Notepad) and update the `IP_ADDRESS` variable:
 
 ```bat
 set IP_ADDRESS=192.168.1.7:5555
 ```
 
-### 2. (Optional) Customize Target Apps
-Open `firetv-remapper.sh` in a text editor and update the target package names:
+### 2. Customize Target Applications (Optional)
+Open `firetv-remapper.sh` and update the target package names:
 
 ```bash
 APP01_PACKAGE="org.smarttube.stable" # Target app for Prime Video button
@@ -111,34 +108,19 @@ APP03_PACKAGE="org.videolan.vlc"     # Target app for Disney+ button
 APP04_PACKAGE="com.esaba.downloader" # Target app for Hulu button
 ```
 
-### 3. Transfer the Script File to Fire TV
-Before executing the script, push `firetv-remapper.sh` to your Fire TV's internal storage (`/sdcard/`):
+### 3. Push Script File to Fire TV
+Transfer `firetv-remapper.sh` to the Fire TV's internal storage (`/sdcard/`):
 
 ```bash
-# Connect to Fire TV
 adb connect YOUR_FIRE_TV_IP:5555
-
-# Push the remapper script to the Fire TV internal storage
 adb -s YOUR_FIRE_TV_IP:5555 push firetv-remapper.sh /sdcard/
-```
-
----
-
-** Note: I don't have Hulu and Disney+ apps installed on my firetv, so i don't need stop this processes when press buttons but maybe you need to avoid high RAM/CPU consume in background!
-
-remove comments on this lines inside close_background_apps() function:
-
-```bash
-# am force-stop "$HULU_PACKAGE" >/dev/null 2>&1
-# am force-stop "$DISNEY_PACKAGE" >/dev/null 2>&1
 ```
 
 ---
 
 ## 🚀 How to Run
 
-1. Make sure your Fire TV is turned on.
-2. Execute `run.bat` by double-clicking it.
-3. If a prompt appears on your Fire TV asking to **"Allow USB debugging?"**, check **"Always allow from this computer"** and select **OK**.
-4. You're ready to go!
-
+1. Ensure your Fire TV is turned on and connected to your Wi-Fi network.
+2. Launch `run.bat` on your PC by double-clicking it.
+3. If a dialog appears on your Fire TV asking **"Allow USB debugging?"**, check **"Always allow from this computer"** and select **OK**.
+4. **Keep the command prompt window running on your PC.** The host script will maintain the active connection and automatically restart the monitoring loop every 3 minutes to prevent process termination.
