@@ -97,14 +97,14 @@ Open `run.bat` on your PC using a text editor (e.g., Notepad) and update the `IP
 set IP_ADDRESS=192.168.1.7:5555
 ```
 
-### 2. Customize Target Applications (Optional)
+### 2. Customize Apps (Optional)
 Open `firetv-remapper.sh` and update the target package names:
 
 ```bash
-APP01_PACKAGE="org.smarttube.stable" # Target app for Prime Video button
-APP02_PACKAGE="com.lazerplayer.app"  # Target app for Netflix button
-APP03_PACKAGE="org.videolan.vlc"     # Target app for Disney+ button
-APP04_PACKAGE="com.esaba.downloader" # Target app for Hulu button
+APP01_PACKAGE="com.google.android.youtube.tv" # Target app for Prime Video button
+APP02_PACKAGE="org.xbmc.kodi"                  # Target app for Netflix button
+APP03_PACKAGE="org.videolan.vlc"               # Target app for Disney+ button
+APP04_PACKAGE="com.esaba.downloader"           # Target app for Hulu button
 ```
 
 ### 3. Push Script File to Fire TV
