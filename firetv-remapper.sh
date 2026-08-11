@@ -14,10 +14,10 @@ pkill getevent >/dev/null 2>&1
 
 echo "$$" > "$PID_FILE"
 
-APP01_PACKAGE="org.smarttube.stable"
-APP02_PACKAGE="com.lazerplayer.app"
-APP03_PACKAGE="org.videolan.vlc"
-APP04_PACKAGE="com.esaba.downloader"
+APP01_PACKAGE="org.smarttube.stable" # Target app for Prime Video button
+APP02_PACKAGE="com.lazerplayer.app"  # Target app for Netflix button
+APP03_PACKAGE="org.videolan.vlc"     # Target app for Disney+ button
+APP04_PACKAGE="com.esaba.downloader" # Target app for Hulu button"
 
 
 PRIME_PACKAGE="com.amazon.firebat"
@@ -43,27 +43,35 @@ close_background_apps() {
 }
 
 find_target_device() {
+    # 1. Atalho direto: se o event5 existe e o usuário sabe que é ele, tenta validar ou assume
+    if [ -e "/dev/input/event5" ]; then
+        name=$(cat "/sys/class/input/event5/device/name" 2>/dev/null)
+        if [ -z "$name" ]; then
+            # Se a permissão bloquear a leitura do nome, mas sabemos que está no event5, retornamos ele direto
+            echo "/dev/input/event5"
+            return 0
+        elif echo "$name" | grep -qiE "firetv|fire tv|amazon.*remote"; then
+            echo "/dev/input/event5"
+            return 0
+        fi
+    fi
+
+    # 2. Varredura padrão caso mude no futuro
     for dev in /dev/input/event*; do
         if [ -e "$dev" ]; then
-            name=$(getevent -i "$dev" 2>/dev/null)
-            if echo "$name" | grep -qi "Amazon Fire TV Remote"; then
-                echo "$dev"
-                return 0
+            ev_name=$(basename "$dev")
+            if [ -f "/sys/class/input/$ev_name/device/name" ]; then
+                name=$(cat "/sys/class/input/$ev_name/device/name" 2>/dev/null)
+                if echo "$name" | grep -qiE "firetv|fire tv|amazon.*remote"; then
+                    echo "$dev"
+                    return 0
+                fi
             fi
         fi
     done
 
-    for dev in /dev/input/event*; do
-        if [ -e "$dev" ]; then
-            name=$(getevent -i "$dev" 2>/dev/null)
-            if echo "$name" | grep -qiE "firetv|fire tv|amazon.*remote"; then
-                echo "$dev"
-                return 0
-            fi
-        fi
-    done
-
-    echo "/dev/input/event4"
+    # 3. Fallback final corrigido para event5 (em vez de event4)
+    echo "/dev/input/event5"
 }
 
 TARGET_DEVICE=$(find_target_device)
