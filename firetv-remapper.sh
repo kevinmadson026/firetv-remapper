@@ -13,15 +13,16 @@ pkill getevent >/dev/null 2>&1
 
 echo "$$" > "$PID_FILE"
 
-APP01_PACKAGE="com.google.android.youtube.tv"
-APP02_PACKAGE="org.xbmc.kodi"
-APP03_PACKAGE="org.videolan.vlc"
-APP04_PACKAGE="com.esaba.downloader"
+APP01_PACKAGE="org.smarttube.stable"
+APP02_PACKAGE="com.lazerplayer.app"
+APP03_PACKAGE="com.instantbits.cast.receiver"
+APP04_PACKAGE="de.belu.appstarter"
 
 PRIME_PACKAGE="com.amazon.firebat"
 NETFLIX_PACKAGE="com.netflix.ninja"
 HULU_PACKAGE="com.hulu.plus"
 DISNEY_PACKAGE="com.disney.disneyplus"
+
 
 TARGET_EVENT_PRIMEVIDEO="02e9"
 TARGET_EVENT_NETFLIX="02e8"
@@ -59,7 +60,27 @@ echo "Monitoring key events on detected device: $TARGET_DEVICE"
 LOCK_FILE="/sdcard/firetv-remapper.lock"
 
 while true; do
+    # 1. Checa se a variável está vazia ou se o arquivo do dispositivo deixou de existir
+    if [ -z "$TARGET_DEVICE" ] || [ ! -e "$TARGET_DEVICE" ]; then
+        TARGET_DEVICE=$(find_target_device)
+        
+        # Se o controle ainda não reconectou, aguarda 2 segundos e tenta de novo (evita alto uso de CPU)
+        if [ -z "$TARGET_DEVICE" ]; then
+            sleep 2
+            continue
+        fi
+        echo "Controle reconectado. Monitorando: $TARGET_DEVICE"
+    fi
+
+    # 2. Tenta capturar os eventos
     line=$(getevent -t -c 2 "$TARGET_DEVICE" 2>/dev/null)
+    
+    # 3. Se o getevent falhar ou retornar vazio (ex: TV dormiu e cortou a conexão durante a leitura)
+    if [ -z "$line" ]; then
+        sleep 1
+        TARGET_DEVICE="" # Zera a variável para forçar a busca (passo 1) no próximo ciclo
+        continue
+    fi
     
     case "$line" in
         *" 0001 $TARGET_EVENT_PRIMEVIDEO 00000001"*)
