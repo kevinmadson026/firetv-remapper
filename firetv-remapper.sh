@@ -13,10 +13,10 @@ pkill getevent >/dev/null 2>&1
 
 echo "$$" > "$PID_FILE"
 
-APP01_PACKAGE="org.smarttube.stable"
-APP02_PACKAGE="com.lazerplayer.app"
-APP03_PACKAGE="com.instantbits.cast.receiver"
-APP04_PACKAGE="de.belu.appstarter"
+APP01_PACKAGE="com.google.android.youtube.tv"
+APP02_PACKAGE="org.xbmc.kodi"
+APP03_PACKAGE="org.videolan.vlc"
+APP04_PACKAGE="com.esaba.downloader"
 
 PRIME_PACKAGE="com.amazon.firebat"
 NETFLIX_PACKAGE="com.netflix.ninja"
