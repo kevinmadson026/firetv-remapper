@@ -37,17 +37,17 @@ adb -s %IP_ADDRESS% shell "pgrep -f getevent" >nul 2>&1
 if errorlevel 1 set STATUS=ERROR
 
 set /a COUNTER+=1
-if %COUNTER% lss 10 goto proceed
+if %COUNTER% lss 6 goto proceed
 
 adb -s %IP_ADDRESS% shell "if [ -f /sdcard/firetv-remapper.lock ]; then exit 0; else exit 1; fi" >nul 2>&1
 
 if not errorlevel 1 (
     echo [%TIME%] Script busy opening an app. Postponing preventive restart...
-    set /a COUNTER=9 
+    set /a COUNTER=5 
     goto proceed
 )
 
-echo [%TIME%] Performing periodic preventive restart (5 min)...
+echo [%TIME%] Performing periodic preventive restart (3 min)...
 set STATUS=RESTART
 set /a COUNTER=0
 
@@ -62,7 +62,7 @@ if "%STATUS%"=="ERROR" (
     adb -s %IP_ADDRESS% shell "pkill -f firetv-remapper; pkill -f getevent; rm -f /sdcard/firetv-remapper.lock" >nul 2>&1
     adb -s %IP_ADDRESS% shell "nohup sh /sdcard/firetv-remapper.sh > /sdcard/firetv-remapper.log 2>&1 &"
 ) else (
-    echo [%TIME%] Script and getevent are running perfectly. (Cycle %COUNTER%/10)
+    echo [%TIME%] Script and getevent are running perfectly. (Cycle %COUNTER%/6)
 )
 
 timeout /t 30 /nobreak >nul
