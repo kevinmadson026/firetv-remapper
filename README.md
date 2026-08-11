@@ -25,6 +25,7 @@ Because Amazon Fire OS aggressively manages memory and frequently kills backgrou
 1. **Continuous Monitoring:** It maintains an active ADB bridge connection to capture remote control keypress events in real time.
 2. **Preventive Restarts:** To prevent Fire OS or socket timeouts from killing the event listener, the host script performs continuous health checks and **automatically restarts the monitoring loop every 3 minutes**.
 3. **PC Execution Requirement:** Your PC must remain turned on and connected to the same local network for the button remapping service to remain active.
+4. **Auto App Interception**: Immediately closes the default application launched by the button press (e.g., Netflix) and redirects to your custom app instead.
 
 ---
 
