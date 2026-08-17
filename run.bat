@@ -4,6 +4,14 @@ setlocal EnableExtensions EnableDelayedExpansion
 title FireTV Remapper - Health Watchdog
 color 0A
 
+rem ===== Bloqueio local: somente um watchdog por computador =====
+set "WATCHDOG_LOCK=%~dp0firetv-watchdog.lock"
+mkdir "%WATCHDOG_LOCK%" >nul 2>&1
+if errorlevel 1 (
+    echo [%TIME%] Ja existe outro watchdog ativo nesta pasta. Encerrando esta copia.
+    exit /b 0
+)
+
 rem ===== Configuracao =====
 set "IP_ADDRESS=192.168.1.16:5555"
 set "CHECK_INTERVAL=10"
@@ -99,10 +107,16 @@ exit /b 0
 
 :script_missing
 echo [%TIME%] Script nao encontrado no Fire TV. Envie firetv-remapper.sh para %REMOTE_SCRIPT%.
-exit /b 1
+goto :cleanup
 
 :restart_service
 rem O PID file identifica a instancia anterior sem matar o proprio comando ADB.
+rem O lock interno do script impede que duas instancias do remapper coexistam.
 adb -s %IP_ADDRESS% shell "PID=$(cat %REMOTE_PID% 2>/dev/null); [ -z \"$PID\" ] || kill $PID 2>/dev/null; pkill -f 'getevent.*02e'; rm -f %REMOTE_LOCK% %REMOTE_HEARTBEAT% %REMOTE_STATE%" >nul 2>&1
 adb -s %IP_ADDRESS% shell "nohup sh %REMOTE_SCRIPT% > %REMOTE_LOG% 2>&1 &" >nul 2>&1
+exit /b 0
+
+:cleanup
+rem Necessario somente se o watchdog terminar por uma rota normal.
+rmdir "%WATCHDOG_LOCK%" >nul 2>&1
 exit /b 0

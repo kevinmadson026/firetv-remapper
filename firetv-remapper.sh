@@ -1,13 +1,14 @@
 #!/system/bin/sh
 
 # Fire TV Remote Button Remapper
-# O processo principal permanece ativo; getevent -c 1 é uma leitura curta e esperada.
+# Apenas uma instância deste script pode permanecer ativa.
 
 BASE_DIR="/sdcard"
 PID_FILE="$BASE_DIR/firetv-remapper.pid"
 HEARTBEAT_FILE="$BASE_DIR/firetv-remapper.heartbeat"
 STATE_FILE="$BASE_DIR/firetv-remapper.state"
 LOCK_FILE="$BASE_DIR/firetv-remapper.lock"
+INSTANCE_LOCK_DIR="$BASE_DIR/firetv-remapper.instance.lock"
 LOG_TAG="firetv-remapper"
 
 APP01_PACKAGE="org.smarttube.stable"
@@ -33,26 +34,39 @@ write_state() {
     echo "$1" > "$STATE_FILE"
 }
 
-# Evita duas instancias e encerra somente a instancia indicada pelo PID file.
-if [ -s "$PID_FILE" ]; then
-    OLD_PID=$(cat "$PID_FILE" 2>/dev/null)
-    if [ -n "$OLD_PID" ] && [ "$OLD_PID" != "$$" ] && kill -0 "$OLD_PID" 2>/dev/null; then
-        log "Encerrando instancia anterior (PID $OLD_PID)."
-        kill "$OLD_PID" 2>/dev/null
-        sleep 1
-        kill -9 "$OLD_PID" 2>/dev/null
+# mkdir e atomico no Android/Linux: somente uma instancia consegue criar o diretorio.
+# Diferentemente do comportamento anterior, uma nova execucao nao mata a instancia ativa.
+if ! mkdir "$INSTANCE_LOCK_DIR" 2>/dev/null; then
+    OLD_PID=$(cat "$INSTANCE_LOCK_DIR/pid" 2>/dev/null)
+    if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
+        log "Instancia ja ativa (PID $OLD_PID); esta execucao sera encerrada."
+        exit 0
+    fi
+
+    # Se o PID ainda nao foi gravado, o processo vencedor pode estar no intervalo
+    # entre mkdir e echo. Nao remova o lock nesse caso, para evitar uma corrida.
+    if [ -z "$OLD_PID" ]; then
+        log "Lock ocupado sem PID; esta execucao sera encerrada."
+        exit 0
+    fi
+
+    # Lock com PID morto: recupera somente lock comprovadamente obsoleto.
+    log "Removendo lock obsoleto (PID $OLD_PID)."
+    rm -rf "$INSTANCE_LOCK_DIR"
+    if ! mkdir "$INSTANCE_LOCK_DIR" 2>/dev/null; then
+        log "Outra instancia assumiu o lock durante a recuperacao; encerrando."
+        exit 0
     fi
 fi
 
-# Remove eventuais getevent antigos deixados por uma execucao interrompida.
-pkill -f "getevent.*02e" >/dev/null 2>&1
-
+echo "$$" > "$INSTANCE_LOCK_DIR/pid"
 echo "$$" > "$PID_FILE"
 write_state "STARTING"
 
 cleanup() {
     write_state "STOPPED"
     rm -f "$HEARTBEAT_FILE" "$PID_FILE" "$LOCK_FILE"
+    rm -rf "$INSTANCE_LOCK_DIR"
     exit 0
 }
 trap cleanup INT TERM HUP EXIT
@@ -107,8 +121,8 @@ while true; do
 
     write_state "MONITORING"
     date +%s > "$HEARTBEAT_FILE"
-    # -c 1 e intencional: cada chamada termina apos um evento e é renovada pelo
-    # processo principal. Se uma leitura travar, o heartbeat deixa de atualizar.
+    # Esta chamada e sequencial; com uma unica instancia do script, existe no
+    # maximo um getevent de monitoramento criado por este servico.
     line=$(getevent -t -c 1 "$TARGET_DEVICE" 2>/dev/null)
     if [ -z "$line" ]; then
         TARGET_DEVICE=""
@@ -148,4 +162,3 @@ while true; do
             ;;
     esac
 done
-
