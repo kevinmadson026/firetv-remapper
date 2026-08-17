@@ -1,14 +1,13 @@
 #!/system/bin/sh
 
 # Fire TV Remote Button Remapper
-# Apenas uma instância deste script pode permanecer ativa.
+# Uma nova execução encerra a instância anterior antes de assumir o serviço.
 
 BASE_DIR="/sdcard"
 PID_FILE="$BASE_DIR/firetv-remapper.pid"
 HEARTBEAT_FILE="$BASE_DIR/firetv-remapper.heartbeat"
 STATE_FILE="$BASE_DIR/firetv-remapper.state"
 LOCK_FILE="$BASE_DIR/firetv-remapper.lock"
-INSTANCE_LOCK_DIR="$BASE_DIR/firetv-remapper.instance.lock"
 LOG_TAG="firetv-remapper"
 
 APP01_PACKAGE="org.smarttube.stable"
@@ -34,39 +33,50 @@ write_state() {
     echo "$1" > "$STATE_FILE"
 }
 
-# mkdir e atomico no Android/Linux: somente uma instancia consegue criar o diretorio.
-# Diferentemente do comportamento anterior, uma nova execucao nao mata a instancia ativa.
-if ! mkdir "$INSTANCE_LOCK_DIR" 2>/dev/null; then
-    OLD_PID=$(cat "$INSTANCE_LOCK_DIR/pid" 2>/dev/null)
-    if [ -n "$OLD_PID" ] && kill -0 "$OLD_PID" 2>/dev/null; then
-        log "Instancia ja ativa (PID $OLD_PID); esta execucao sera encerrada."
-        exit 0
+stop_all_getevent() {
+    # killall funciona no Fire OS e encerra todos os getevent anteriores.
+    killall getevent >/dev/null 2>&1
+    sleep 1
+    killall getevent >/dev/null 2>&1
+}
+
+stop_previous_instance() {
+    OLD_PID=$(cat "$PID_FILE" 2>/dev/null)
+
+    # Encerra todas as copias antigas do proprio remapper, nao apenas a do PID file.
+    for REMAPPER_PID in $(ps 2>/dev/null | awk '$0 ~ /[f]iretv-remapper\.sh/ {print $1}'); do
+        if [ "$REMAPPER_PID" != "$$" ]; then
+            log "Encerrando remapper anterior (PID $REMAPPER_PID)."
+            kill "$REMAPPER_PID" 2>/dev/null
+        fi
+    done
+
+    if [ -n "$OLD_PID" ] && [ "$OLD_PID" != "$$" ]; then
+        kill "$OLD_PID" 2>/dev/null
     fi
 
-    # Se o PID ainda nao foi gravado, o processo vencedor pode estar no intervalo
-    # entre mkdir e echo. Nao remova o lock nesse caso, para evitar uma corrida.
-    if [ -z "$OLD_PID" ]; then
-        log "Lock ocupado sem PID; esta execucao sera encerrada."
-        exit 0
-    fi
+    sleep 1
+    for REMAPPER_PID in $(ps 2>/dev/null | awk '$0 ~ /[f]iretv-remapper\.sh/ {print $1}'); do
+        if [ "$REMAPPER_PID" != "$$" ]; then
+            kill -9 "$REMAPPER_PID" 2>/dev/null
+        fi
+    done
 
-    # Lock com PID morto: recupera somente lock comprovadamente obsoleto.
-    log "Removendo lock obsoleto (PID $OLD_PID)."
-    rm -rf "$INSTANCE_LOCK_DIR"
-    if ! mkdir "$INSTANCE_LOCK_DIR" 2>/dev/null; then
-        log "Outra instancia assumiu o lock durante a recuperacao; encerrando."
-        exit 0
-    fi
-fi
+    # Somente depois de parar todas as copias, remove todos os getevent antigos.
+    stop_all_getevent
+}
 
-echo "$$" > "$INSTANCE_LOCK_DIR/pid"
+stop_previous_instance
 echo "$$" > "$PID_FILE"
 write_state "STARTING"
 
 cleanup() {
-    write_state "STOPPED"
-    rm -f "$HEARTBEAT_FILE" "$PID_FILE" "$LOCK_FILE"
-    rm -rf "$INSTANCE_LOCK_DIR"
+    CURRENT_PID=$(cat "$PID_FILE" 2>/dev/null)
+    # A instância antiga não pode apagar os arquivos que já pertencem à nova.
+    if [ "$CURRENT_PID" = "$$" ]; then
+        write_state "STOPPED"
+        rm -f "$HEARTBEAT_FILE" "$PID_FILE" "$LOCK_FILE"
+    fi
     exit 0
 }
 trap cleanup INT TERM HUP EXIT
