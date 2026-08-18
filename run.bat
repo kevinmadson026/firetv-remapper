@@ -1,10 +1,10 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 
-title FireTV Remapper - Unified Watchdog Log
+title FireTV Remapper - Watchdog
 color 0A
 
-rem ===== Configuracao =====
+rem ===== Configuration =====
 set "IP_ADDRESS=192.168.1.16:5555"
 set "CHECK_INTERVAL=10"
 set "OFFLINE_INTERVAL=20"
@@ -16,8 +16,6 @@ set "REMOTE_PID=/sdcard/firetv-remapper.pid"
 set "REMOTE_HEARTBEAT=/sdcard/firetv-remapper.heartbeat"
 set "REMOTE_STATE=/sdcard/firetv-remapper.state"
 set "REMOTE_LOCK=/sdcard/firetv-remapper.lock"
-set "SCRIPT_DIR=%~dp0"
-set "LOG_WATCHDOG=%SCRIPT_DIR%log_watchdog.bat"
 
 set /a BAD_COUNT=0
 set /a RESTART_COUNT=0
@@ -27,15 +25,6 @@ if errorlevel 1 goto initial_offline
 call :ensure_started
 
 :initial_offline
-rem O monitor do log roda em segundo plano na MESMA janela deste watchdog.
-if exist "%LOG_WATCHDOG%" (
-    echo [!TIME!] Eventos monitorados: event4 e event5.
-    echo [!TIME!] Aguardando deteccao de botoes; as linhas do remapper aparecerao abaixo.
-    start /b "" cmd /c call "%LOG_WATCHDOG%" "%IP_ADDRESS%" "%REMOTE_LOG%"
-) else (
-    echo [!TIME!] AVISO: %LOG_WATCHDOG% nao foi encontrado; log automatico desativado.
-)
-
 goto main_loop
 
 :main_loop
@@ -48,37 +37,32 @@ if not errorlevel 1 goto service_healthy
 set /a BAD_COUNT+=1
 if !BAD_COUNT! LSS %FAIL_CONFIRMATIONS% goto health_failure_pending
 
-call :is_busy
-if not errorlevel 1 goto button_in_progress
-
-echo [%TIME%] Falha confirmada; reiniciando apenas o servico remoto.
+echo [%TIME%] Confirmed failure; restarting the remote service.
 call :restart_service
 set /a BAD_COUNT=0
 set /a RESTART_COUNT+=1
-echo [%TIME%] Recuperacao concluida. Reinicios: !RESTART_COUNT!.
+echo [%TIME%] Recovery complete. Restarts: !RESTART_COUNT!.
 timeout /t %CHECK_INTERVAL% /nobreak >nul
 goto main_loop
 
 :adb_offline
 set /a BAD_COUNT=0
-echo [%TIME%] ADB indisponivel; tentando reconectar em %OFFLINE_INTERVAL% segundos.
+echo [%TIME%] ADB unavailable; retrying connection in %OFFLINE_INTERVAL% seconds.
 timeout /t %OFFLINE_INTERVAL% /nobreak >nul
 goto main_loop
 
 :service_healthy
-if !BAD_COUNT! GTR 0 echo [%TIME%] Servico recuperado; falha transitoria ignorada.
-set /a BAD_COUNT=0
-echo [%TIME%] Saudavel: script, heartbeat e captura ativos.
+if !BAD_COUNT! GTR 0 (
+    echo [%TIME%] Service recovered; transient failure ignored.
+    set /a BAD_COUNT=0
+) else (
+    echo [%TIME%] Healthy: script, heartbeat and capture active.
+)
 timeout /t %CHECK_INTERVAL% /nobreak >nul
 goto main_loop
 
 :health_failure_pending
-echo [%TIME%] Falha de saude provisoria (!BAD_COUNT!/%FAIL_CONFIRMATIONS%); aguardando confirmacao.
-timeout /t %CHECK_INTERVAL% /nobreak >nul
-goto main_loop
-
-:button_in_progress
-echo [%TIME%] Operacao de botao em andamento; recuperacao adiada.
+echo [%TIME%] Provisional health failure (!BAD_COUNT!/%FAIL_CONFIRMATIONS%); awaiting confirmation.
 timeout /t %CHECK_INTERVAL% /nobreak >nul
 goto main_loop
 
@@ -89,31 +73,28 @@ adb -s %IP_ADDRESS% get-state >nul 2>&1
 exit /b %errorlevel%
 
 :health
-rem Se getevent travar ou o processo remoto morrer, o heartbeat envelhece.
+rem If getevent freezes or the remote process dies, the heartbeat ages out.
 adb -s %IP_ADDRESS% shell "NOW=$(date +%%s); HB=$(cat %REMOTE_HEARTBEAT% 2>/dev/null); PID=$(cat %REMOTE_PID% 2>/dev/null); STATE=$(cat %REMOTE_STATE% 2>/dev/null); [ -n \"$PID\" ] && kill -0 $PID 2>/dev/null && [ -n \"$HB\" ] && [ $((NOW-HB)) -le %HEARTBEAT_TIMEOUT% ] && [ \"$STATE\" = \"MONITORING\" -o \"$STATE\" = \"WAITING_DEVICE\" -o \"$STATE\" = \"RECOVERING_DEVICE\" ]"
 if errorlevel 1 exit /b 1
 exit /b 0
-
-:is_busy
-adb -s %IP_ADDRESS% shell "test -e %REMOTE_LOCK%"
-exit /b %errorlevel%
 
 :ensure_started
 adb -s %IP_ADDRESS% shell "test -f %REMOTE_SCRIPT%" >nul 2>&1
 if errorlevel 1 goto script_missing
 adb -s %IP_ADDRESS% shell "chmod +x %REMOTE_SCRIPT% && sed -i 's/\r//g' %REMOTE_SCRIPT%" >nul 2>&1
-rem Sempre substitui a instancia anterior ao iniciar este watchdog.
+rem Always replaces the previous instance when starting this watchdog.
 call :restart_service
 exit /b 0
 
 :script_missing
-echo [%TIME%] Script nao encontrado no Fire TV. Envie firetv-remapper.sh para %REMOTE_SCRIPT%.
+echo [%TIME%] Script not found on the Fire TV. Upload firetv-remapper.sh to %REMOTE_SCRIPT%.
 exit /b 1
 
 :restart_service
-rem O PID/lock remoto impede a coexistencia de duas instancias do remapper.
-adb -s %IP_ADDRESS% shell "killall sh" >nul 2>&1
+rem Kills all old copies of the remapper and starts a fresh instance.
+adb -s %IP_ADDRESS% shell "for P in $(ps 2>/dev/null | awk 'NR>1 && $0 ~ /[f]iretv-remapper\.sh/ {print $1}'); do kill $P 2>/dev/null; done" >nul 2>&1
 adb -s %IP_ADDRESS% shell "killall getevent" >nul 2>&1
 adb -s %IP_ADDRESS% shell "rm -f %REMOTE_LOCK% %REMOTE_HEARTBEAT% %REMOTE_STATE%" >nul 2>&1
-adb -s %IP_ADDRESS% shell "nohup sh %REMOTE_SCRIPT% > %REMOTE_LOG% 2>&1 &" >nul 2>&1
+rem The log is appended (>>) instead of truncated (>) so a restart never clears the history.
+adb -s %IP_ADDRESS% shell "nohup sh %REMOTE_SCRIPT% >> %REMOTE_LOG% 2>&1 &" >nul 2>&1
 exit /b 0
