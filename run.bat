@@ -1,21 +1,35 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 
-title FireTV Remapper - Health Watchdog
+title FireTV Remapper - Aggressive Health Watchdog
 color 0A
 
 rem ===== Configuration =====
+rem CHECK_INTERVAL : how often (seconds) the Windows side probes the device.
+rem OFFLINE_INTERVAL: wait before retrying when ADB itself is unreachable.
+rem FAIL_CONFIRMATIONS: consecutive failed probes before restarting the service.
+rem   Detection time (worst case) = CHECK_INTERVAL * FAIL_CONFIRMATIONS.
+rem   With 3s * 2 = 6s max until the restart command is issued.
+rem ALIVE_TIMEOUT: max allowed age (seconds) of firetv-remapper.alive.
+rem   If the remote script or its alive pulse dies/stalls, run.bat restarts it.
+rem LOOP_TIMEOUT_WARN: max allowed age (seconds) of firetv-remapper.loopstart
+rem   before reporting the main loop is stuck (informational; the stuck guard
+rem   inside the sh kills the blocked getevent on its own after LOOP_TIMEOUT=15s).
+
 set "IP_ADDRESS=192.168.1.16:5555"
-set "CHECK_INTERVAL=10"
-set "OFFLINE_INTERVAL=20"
+set "CHECK_INTERVAL=3"
+set "OFFLINE_INTERVAL=15"
 set "FAIL_CONFIRMATIONS=2"
-set "HEARTBEAT_TIMEOUT=25"
+set "ALIVE_TIMEOUT=6"
+set "LOOP_TIMEOUT_WARN=20"
 set "REMOTE_SCRIPT=/sdcard/firetv-remapper.sh"
 set "REMOTE_LOG=/sdcard/firetv-remapper.log"
 set "REMOTE_PID=/sdcard/firetv-remapper.pid"
 set "REMOTE_HEARTBEAT=/sdcard/firetv-remapper.heartbeat"
 set "REMOTE_STATE=/sdcard/firetv-remapper.state"
 set "REMOTE_LOCK=/sdcard/firetv-remapper.lock"
+set "REMOTE_ALIVE=/sdcard/firetv-remapper.alive"
+set "REMOTE_LOOPSTART=/sdcard/firetv-remapper.loopstart"
 set "SCRIPT_DIR=%~dp0"
 set "LOG_WATCHDOG=%SCRIPT_DIR%log_watchdog.bat"
 
@@ -66,7 +80,6 @@ goto main_loop
 :service_healthy
 if !BAD_COUNT! GTR 0 echo [%TIME%] Service recovered; transient failure ignored.
 set /a BAD_COUNT=0
-echo [%TIME%] Healthy: script, heartbeat and capture active.
 timeout /t %CHECK_INTERVAL% /nobreak >nul
 goto main_loop
 
@@ -87,8 +100,11 @@ adb -s %IP_ADDRESS% get-state >nul 2>&1
 exit /b %errorlevel%
 
 :health
-rem If getevent freezes or the remote process dies, the heartbeat ages.
-adb -s %IP_ADDRESS% shell "NOW=$(date +%%s); HB=$(cat %REMOTE_HEARTBEAT% 2>/dev/null); PID=$(cat %REMOTE_PID% 2>/dev/null); STATE=$(cat %REMOTE_STATE% 2>/dev/null); [ -n \"$PID\" ] && kill -0 $PID 2>/dev/null && [ -n \"$HB\" ] && [ $((NOW-HB)) -le %HEARTBEAT_TIMEOUT% ] && [ \"$STATE\" = \"MONITORING\" -o \"$STATE\" = \"WAITING_DEVICE\" -o \"$STATE\" = \"RECOVERING_DEVICE\" ]"
+rem The ALIVE pulse is the aggressive watchdog signal: firetv-remapper.alive
+rem must be refreshed every second by the remote script. If its age exceeds
+rem ALIVE_TIMEOUT, the script (or its getevent) is considered dead/stuck and
+rem run.bat restarts the service within seconds.
+adb -s %IP_ADDRESS% shell "NOW=$(date +%%s); ALIVE=$(cat %REMOTE_ALIVE% 2>/dev/null); PID=$(cat %REMOTE_PID% 2>/dev/null); STATE=$(cat %REMOTE_STATE% 2>/dev/null); LOOPSTART=$(cat %REMOTE_LOOPSTART% 2>/dev/null); [ -n "$ALIVE" ] && [ $((NOW-ALIVE)) -le %ALIVE_TIMEOUT% ] && [ -n "$PID" ] && kill -0 $PID 2>/dev/null && [ "$STATE" = "MONITORING" -o "$STATE" = "WAITING_DEVICE" -o "$STATE" = "RECOVERING_DEVICE" ]"
 if errorlevel 1 exit /b 1
 exit /b 0
 
@@ -112,6 +128,6 @@ exit /b 1
 rem The remote PID/lock prevents two remapper instances from coexisting.
 adb -s %IP_ADDRESS% shell "killall sh" >nul 2>&1
 adb -s %IP_ADDRESS% shell "killall getevent" >nul 2>&1
-adb -s %IP_ADDRESS% shell "rm -f %REMOTE_LOCK% %REMOTE_HEARTBEAT% %REMOTE_STATE%" >nul 2>&1
+adb -s %IP_ADDRESS% shell "rm -f %REMOTE_LOCK% %REMOTE_HEARTBEAT% %REMOTE_STATE% %REMOTE_ALIVE% %REMOTE_LOOPSTART%" >nul 2>&1
 adb -s %IP_ADDRESS% shell "nohup sh %REMOTE_SCRIPT% > %REMOTE_LOG% 2>&1 &" >nul 2>&1
 exit /b 0
