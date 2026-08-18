@@ -16,6 +16,8 @@ set "REMOTE_PID=/sdcard/firetv-remapper.pid"
 set "REMOTE_HEARTBEAT=/sdcard/firetv-remapper.heartbeat"
 set "REMOTE_STATE=/sdcard/firetv-remapper.state"
 set "REMOTE_LOCK=/sdcard/firetv-remapper.lock"
+set "SCRIPT_DIR=%~dp0"
+set "LOG_WATCHDOG=%SCRIPT_DIR%log_watchdog.bat"
 
 set /a BAD_COUNT=0
 set /a RESTART_COUNT=0
@@ -25,8 +27,14 @@ if errorlevel 1 goto initial_offline
 call :ensure_started
 
 :initial_offline
-rem Esta e a unica janela adicional: ela apenas acompanha o log remoto.
-start "FireTV - Real-Time Log" cmd /k "adb -s %IP_ADDRESS% shell tail -f %REMOTE_LOG%"
+rem O monitor do log se reconecta sozinho quando a sessao ADB termina.
+if exist "%LOG_WATCHDOG%" (
+    start "FireTV - Real-Time Log" cmd /k call "%LOG_WATCHDOG%" "%IP_ADDRESS%" "%REMOTE_LOG%"
+) else (
+    echo [%TIME%] AVISO: %LOG_WATCHDOG% nao foi encontrado; log automatico desativado.
+)
+
+goto main_loop
 
 :main_loop
 call :connect
@@ -51,7 +59,7 @@ goto main_loop
 
 :adb_offline
 set /a BAD_COUNT=0
-echo [%TIME%] ADB indisponivel; aguardando sem reiniciar nem despertar o Fire TV.
+echo [%TIME%] ADB indisponivel; tentando reconectar em %OFFLINE_INTERVAL% segundos.
 timeout /t %OFFLINE_INTERVAL% /nobreak >nul
 goto main_loop
 
@@ -73,13 +81,13 @@ timeout /t %CHECK_INTERVAL% /nobreak >nul
 goto main_loop
 
 :connect
+adb start-server >nul 2>&1
 adb connect %IP_ADDRESS% >nul 2>&1
 adb -s %IP_ADDRESS% get-state >nul 2>&1
 exit /b %errorlevel%
 
 :health
-rem O heartbeat e atualizado pelo loop principal antes de chamar getevent.
-rem Se getevent travar, o heartbeat envelhece e a falha e detectada.
+rem Se getevent travar ou o processo remoto morrer, o heartbeat envelhece.
 adb -s %IP_ADDRESS% shell "NOW=$(date +%%s); HB=$(cat %REMOTE_HEARTBEAT% 2>/dev/null); PID=$(cat %REMOTE_PID% 2>/dev/null); STATE=$(cat %REMOTE_STATE% 2>/dev/null); [ -n \"$PID\" ] && kill -0 $PID 2>/dev/null && [ -n \"$HB\" ] && [ $((NOW-HB)) -le %HEARTBEAT_TIMEOUT% ] && [ \"$STATE\" = \"MONITORING\" -o \"$STATE\" = \"WAITING_DEVICE\" -o \"$STATE\" = \"RECOVERING_DEVICE\" ]"
 if errorlevel 1 exit /b 1
 exit /b 0
@@ -101,13 +109,9 @@ echo [%TIME%] Script nao encontrado no Fire TV. Envie firetv-remapper.sh para %R
 exit /b 1
 
 :restart_service
-rem O PID file identifica a instancia anterior sem matar o proprio comando ADB.
-rem O lock interno do script impede que duas instancias do remapper coexistam.
-rem killall sh encerra todas as instancias antigas do remapper.
+rem O PID/lock remoto impede a coexistencia de duas instancias do remapper.
 adb -s %IP_ADDRESS% shell "killall sh" >nul 2>&1
-rem Comando separado: killall sh pode encerrar a shell anterior do ADB.
 adb -s %IP_ADDRESS% shell "killall getevent" >nul 2>&1
 adb -s %IP_ADDRESS% shell "rm -f %REMOTE_LOCK% %REMOTE_HEARTBEAT% %REMOTE_STATE%" >nul 2>&1
 adb -s %IP_ADDRESS% shell "nohup sh %REMOTE_SCRIPT% > %REMOTE_LOG% 2>&1 &" >nul 2>&1
 exit /b 0
-
