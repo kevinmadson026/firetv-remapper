@@ -1,6 +1,6 @@
 # Fire TV Remote Button Remapper
 
-A lightweight utility script to remap dedicated app buttons on your Amazon Fire TV Stick remote control to open your preferred custom applications.
+A lightweight utility script to remap dedicated app buttons ( or any button ) on your Amazon Fire TV Stick remote control to open your preferred custom applications.
 
 <img width="224" height="365" alt="Fire TV Remote" src="https://github.com/user-attachments/assets/377983f0-aa08-4f6e-b8de-720c8664aa5a" />
 
