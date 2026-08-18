@@ -15,10 +15,10 @@ LOCK_FILE="$BASE_DIR/firetv-remapper.lock"
 ALIVE_FILE="$BASE_DIR/firetv-remapper.alive"
 LOG_TAG="firetv-remapper"
 
-APP01_PACKAGE="org.smarttube.stable"
-APP02_PACKAGE="com.lazerplayer.app"
-APP03_PACKAGE="com.instantbits.cast.receiver"
-APP04_PACKAGE="de.belu.appstarter"
+APP01_PACKAGE="com.google.android.youtube.tv" # Target app for Prime Video button
+APP02_PACKAGE="org.xbmc.kodi"                  # Target app for Netflix button
+APP03_PACKAGE="org.videolan.vlc"               # Target app for Disney+ button
+APP04_PACKAGE="com.esaba.downloader"           # Target app for Hulu button
 
 PRIME_PACKAGE="com.amazon.firebat"
 NETFLIX_PACKAGE="com.netflix.ninja"
