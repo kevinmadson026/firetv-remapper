@@ -9,21 +9,21 @@ if not defined REMOTE_LOG set "REMOTE_LOG=/sdcard/firetv-remapper.log"
 title FireTV - Real-Time Log Watchdog
 color 07
 
-echo [%TIME%] Monitor de log iniciado para %IP_ADDRESS%.
+echo [%TIME%] Log monitor started for %IP_ADDRESS%.
 
 :loop
 adb start-server >nul 2>&1
 adb connect %IP_ADDRESS% >nul 2>&1
 adb -s %IP_ADDRESS% get-state >nul 2>&1
 if errorlevel 1 (
-    echo [%TIME%] ADB indisponivel; nova tentativa em 5 segundos.
+    echo [%TIME%] ADB unavailable; retrying in 5 seconds.
     timeout /t 5 /nobreak >nul
     goto loop
 )
 
-echo [%TIME%] Conectado; acompanhando %REMOTE_LOG%.
+echo [%TIME%] Connected; following %REMOTE_LOG%.
 adb -s %IP_ADDRESS% shell tail -f %REMOTE_LOG%
 
-echo [%TIME%] Sessao do log terminou (terminated); reconectando automaticamente.
+echo [%TIME%] Log session ended (terminated); reconnecting automatically.
 timeout /t 3 /nobreak >nul
 goto loop

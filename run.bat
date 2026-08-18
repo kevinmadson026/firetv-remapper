@@ -4,7 +4,7 @@ setlocal EnableExtensions EnableDelayedExpansion
 title FireTV Remapper - Health Watchdog
 color 0A
 
-rem ===== Configuracao =====
+rem ===== Configuration =====
 set "IP_ADDRESS=192.168.1.16:5555"
 set "CHECK_INTERVAL=10"
 set "OFFLINE_INTERVAL=20"
@@ -27,11 +27,11 @@ if errorlevel 1 goto initial_offline
 call :ensure_started
 
 :initial_offline
-rem O monitor do log se reconecta sozinho quando a sessao ADB termina.
+rem The log monitor reconnects on its own when the ADB session ends.
 if exist "%LOG_WATCHDOG%" (
     start "FireTV - Real-Time Log" cmd /k call "%LOG_WATCHDOG%" "%IP_ADDRESS%" "%REMOTE_LOG%"
 ) else (
-    echo [%TIME%] AVISO: %LOG_WATCHDOG% nao foi encontrado; log automatico desativado.
+    echo [%TIME%] WARNING: %LOG_WATCHDOG% was not found; automatic logging disabled.
 )
 
 goto main_loop
@@ -49,34 +49,34 @@ if !BAD_COUNT! LSS %FAIL_CONFIRMATIONS% goto health_failure_pending
 call :is_busy
 if not errorlevel 1 goto button_in_progress
 
-echo [%TIME%] Falha confirmada; reiniciando apenas o servico remoto.
+echo [%TIME%] Failure confirmed; restarting only the remote service.
 call :restart_service
 set /a BAD_COUNT=0
 set /a RESTART_COUNT+=1
-echo [%TIME%] Recuperacao concluida. Reinicios: !RESTART_COUNT!.
+echo [%TIME%] Recovery complete. Restarts: !RESTART_COUNT!.
 timeout /t %CHECK_INTERVAL% /nobreak >nul
 goto main_loop
 
 :adb_offline
 set /a BAD_COUNT=0
-echo [%TIME%] ADB indisponivel; tentando reconectar em %OFFLINE_INTERVAL% segundos.
+echo [%TIME%] ADB unavailable; trying to reconnect in %OFFLINE_INTERVAL% seconds.
 timeout /t %OFFLINE_INTERVAL% /nobreak >nul
 goto main_loop
 
 :service_healthy
-if !BAD_COUNT! GTR 0 echo [%TIME%] Servico recuperado; falha transitoria ignorada.
+if !BAD_COUNT! GTR 0 echo [%TIME%] Service recovered; transient failure ignored.
 set /a BAD_COUNT=0
-echo [%TIME%] Saudavel: script, heartbeat e captura ativos.
+echo [%TIME%] Healthy: script, heartbeat and capture active.
 timeout /t %CHECK_INTERVAL% /nobreak >nul
 goto main_loop
 
 :health_failure_pending
-echo [%TIME%] Falha de saude provisoria (!BAD_COUNT!/%FAIL_CONFIRMATIONS%); aguardando confirmacao.
+echo [%TIME%] Provisional health failure (!BAD_COUNT!/%FAIL_CONFIRMATIONS%); awaiting confirmation.
 timeout /t %CHECK_INTERVAL% /nobreak >nul
 goto main_loop
 
 :button_in_progress
-echo [%TIME%] Operacao de botao em andamento; recuperacao adiada.
+echo [%TIME%] Button operation in progress; recovery deferred.
 timeout /t %CHECK_INTERVAL% /nobreak >nul
 goto main_loop
 
@@ -87,7 +87,7 @@ adb -s %IP_ADDRESS% get-state >nul 2>&1
 exit /b %errorlevel%
 
 :health
-rem Se getevent travar ou o processo remoto morrer, o heartbeat envelhece.
+rem If getevent freezes or the remote process dies, the heartbeat ages.
 adb -s %IP_ADDRESS% shell "NOW=$(date +%%s); HB=$(cat %REMOTE_HEARTBEAT% 2>/dev/null); PID=$(cat %REMOTE_PID% 2>/dev/null); STATE=$(cat %REMOTE_STATE% 2>/dev/null); [ -n \"$PID\" ] && kill -0 $PID 2>/dev/null && [ -n \"$HB\" ] && [ $((NOW-HB)) -le %HEARTBEAT_TIMEOUT% ] && [ \"$STATE\" = \"MONITORING\" -o \"$STATE\" = \"WAITING_DEVICE\" -o \"$STATE\" = \"RECOVERING_DEVICE\" ]"
 if errorlevel 1 exit /b 1
 exit /b 0
@@ -100,16 +100,16 @@ exit /b %errorlevel%
 adb -s %IP_ADDRESS% shell "test -f %REMOTE_SCRIPT%" >nul 2>&1
 if errorlevel 1 goto script_missing
 adb -s %IP_ADDRESS% shell "chmod +x %REMOTE_SCRIPT% && sed -i 's/\r//g' %REMOTE_SCRIPT%" >nul 2>&1
-rem Sempre substitui a instancia anterior ao iniciar este watchdog.
+rem Always replaces the previous instance when starting this watchdog.
 call :restart_service
 exit /b 0
 
 :script_missing
-echo [%TIME%] Script nao encontrado no Fire TV. Envie firetv-remapper.sh para %REMOTE_SCRIPT%.
+echo [%TIME%] Script not found on the Fire TV. Push firetv-remapper.sh to %REMOTE_SCRIPT%.
 exit /b 1
 
 :restart_service
-rem O PID/lock remoto impede a coexistencia de duas instancias do remapper.
+rem The remote PID/lock prevents two remapper instances from coexisting.
 adb -s %IP_ADDRESS% shell "killall sh" >nul 2>&1
 adb -s %IP_ADDRESS% shell "killall getevent" >nul 2>&1
 adb -s %IP_ADDRESS% shell "rm -f %REMOTE_LOCK% %REMOTE_HEARTBEAT% %REMOTE_STATE%" >nul 2>&1

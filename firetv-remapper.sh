@@ -1,7 +1,7 @@
 #!/system/bin/sh
 
 # Fire TV Remote Button Remapper
-# Uma nova execução encerra a instância anterior antes de assumir o serviço.
+# A new execution terminates the previous instance before taking over the service.
 
 BASE_DIR="/sdcard"
 PID_FILE="$BASE_DIR/firetv-remapper.pid"
@@ -34,7 +34,7 @@ write_state() {
 }
 
 stop_all_getevent() {
-    # killall funciona no Fire OS e encerra todos os getevent anteriores.
+    # killall works on Fire OS and terminates all previous getevent processes.
     killall getevent >/dev/null 2>&1
     sleep 1
     killall getevent >/dev/null 2>&1
@@ -43,10 +43,10 @@ stop_all_getevent() {
 stop_previous_instance() {
     OLD_PID=$(cat "$PID_FILE" 2>/dev/null)
 
-    # Encerra todas as copias antigas do proprio remapper, nao apenas a do PID file.
+    # Terminates all old copies of the remapper itself, not only the one in the PID file.
     for REMAPPER_PID in $(ps 2>/dev/null | awk '$0 ~ /[f]iretv-remapper\.sh/ {print $1}'); do
         if [ "$REMAPPER_PID" != "$$" ]; then
-            log "Encerrando remapper anterior (PID $REMAPPER_PID)."
+            log "Terminating previous remapper (PID $REMAPPER_PID)."
             kill "$REMAPPER_PID" 2>/dev/null
         fi
     done
@@ -62,7 +62,7 @@ stop_previous_instance() {
         fi
     done
 
-    # Somente depois de parar todas as copias, remove todos os getevent antigos.
+    # Only after stopping all copies does it remove all old getevent processes.
     stop_all_getevent
 }
 
@@ -72,7 +72,7 @@ write_state "STARTING"
 
 cleanup() {
     CURRENT_PID=$(cat "$PID_FILE" 2>/dev/null)
-    # A instância antiga não pode apagar os arquivos que já pertencem à nova.
+    # The old instance must not delete the files that already belong to the new one.
     if [ "$CURRENT_PID" = "$$" ]; then
         write_state "STOPPED"
         rm -f "$HEARTBEAT_FILE" "$PID_FILE" "$LOCK_FILE"
@@ -115,7 +115,7 @@ launch_app() {
 
 TARGET_DEVICE=""
 write_state "WAITING_DEVICE"
-log "Servico iniciado; aguardando o controle remoto."
+log "Service started; waiting for the remote control."
 
 while true; do
     if [ -z "$TARGET_DEVICE" ] || [ ! -e "$TARGET_DEVICE" ]; then
@@ -126,13 +126,13 @@ while true; do
             sleep 2
             continue
         fi
-        log "Controle detectado em $TARGET_DEVICE."
+        log "Remote detected at $TARGET_DEVICE."
     fi
 
     write_state "MONITORING"
     date +%s > "$HEARTBEAT_FILE"
-    # Esta chamada e sequencial; com uma unica instancia do script, existe no
-    # maximo um getevent de monitoramento criado por este servico.
+    # This call is sequential; with a single instance of the script, at most one
+    # monitoring getevent is created by this service.
     line=$(getevent -t -c 1 "$TARGET_DEVICE" 2>/dev/null)
     if [ -z "$line" ]; then
         TARGET_DEVICE=""
@@ -145,28 +145,28 @@ while true; do
         *" 0001 $TARGET_EVENT_PRIMEVIDEO 00000001"*)
             touch "$LOCK_FILE"
             write_state "HANDLING_PRIMEVIDEO"
-            log "Botao Prime Video detectado; abrindo $APP01_PACKAGE."
+            log "Prime Video button detected; opening $APP01_PACKAGE."
             launch_app "$APP01_PACKAGE"
             rm -f "$LOCK_FILE"
             ;;
         *" 0001 $TARGET_EVENT_NETFLIX 00000001"*)
             touch "$LOCK_FILE"
             write_state "HANDLING_NETFLIX"
-            log "Botao Netflix detectado; abrindo $APP02_PACKAGE."
+            log "Netflix button detected; opening $APP02_PACKAGE."
             launch_app "$APP02_PACKAGE"
             rm -f "$LOCK_FILE"
             ;;
         *" 0001 $TARGET_EVENT_DISNEY 00000001"*)
             touch "$LOCK_FILE"
             write_state "HANDLING_DISNEY"
-            log "Botao Disney+ detectado; abrindo $APP03_PACKAGE."
+            log "Disney+ button detected; opening $APP03_PACKAGE."
             launch_app "$APP03_PACKAGE"
             rm -f "$LOCK_FILE"
             ;;
         *" 0001 $TARGET_EVENT_HULU 00000001"*)
             touch "$LOCK_FILE"
             write_state "HANDLING_HULU"
-            log "Botao Hulu detectado; abrindo $APP04_PACKAGE."
+            log "Hulu button detected; opening $APP04_PACKAGE."
             launch_app "$APP04_PACKAGE"
             rm -f "$LOCK_FILE"
             ;;
