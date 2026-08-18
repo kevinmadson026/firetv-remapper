@@ -1,7 +1,7 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 
-title FireTV Remapper - Health Watchdog
+title FireTV Remapper - Unified Watchdog Log
 color 0A
 
 rem ===== Configuracao =====
@@ -27,11 +27,13 @@ if errorlevel 1 goto initial_offline
 call :ensure_started
 
 :initial_offline
-rem O monitor do log se reconecta sozinho quando a sessao ADB termina.
+rem O monitor do log roda em segundo plano na MESMA janela deste watchdog.
 if exist "%LOG_WATCHDOG%" (
-    start "FireTV - Real-Time Log" cmd /k call "%LOG_WATCHDOG%" "%IP_ADDRESS%" "%REMOTE_LOG%"
+    echo [!TIME!] Eventos monitorados: event4 e event5.
+    echo [!TIME!] Aguardando deteccao de botoes; as linhas do remapper aparecerao abaixo.
+    start /b "" cmd /c call "%LOG_WATCHDOG%" "%IP_ADDRESS%" "%REMOTE_LOG%"
 ) else (
-    echo [%TIME%] AVISO: %LOG_WATCHDOG% nao foi encontrado; log automatico desativado.
+    echo [!TIME!] AVISO: %LOG_WATCHDOG% nao foi encontrado; log automatico desativado.
 )
 
 goto main_loop
