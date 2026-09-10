@@ -46,7 +46,7 @@ Before running the script, make sure that:
 
 If your router assigns IP addresses automatically, consider creating a DHCP reservation for the Fire TV. Otherwise, its IP address may change and you may need to update `run.bat` or `run_linux.sh`.
 
-Before pushing the script, verify the ADB connection:
+Before starting the launcher, verify the ADB connection:
 
 ```bash
 adb connect YOUR_FIRE_TV_IP:5555
@@ -104,7 +104,7 @@ This is the fastest method:
 # Connect to your Fire TV
 adb connect YOUR_FIRE_TV_IP:5555
 
-# List installed packages matching a keyword on Linux, macOS, Git Bash, or WSL
+# Linux, macOS, Git Bash, or WSL
 adb shell pm list packages | grep -i "youtube"
 ```
 
@@ -140,6 +140,12 @@ Open `run.bat` on Windows or `run_linux.sh` on Linux in a text editor, and updat
 set IP_ADDRESS=192.168.1.7:5555
 ```
 
+For `run_linux.sh`, update the corresponding variable using this format:
+
+```bash
+IP_ADDRESS="192.168.1.7:5555"
+```
+
 ### 2. Customize Applications
 
 To change the applications launched by the buttons, open `firetv-remapper.sh` and update the target package names:
@@ -151,26 +157,13 @@ APP03_PACKAGE="org.videolan.vlc"               # Disney+ button
 APP04_PACKAGE="com.esaba.downloader"           # Hulu button
 ```
 
-### 3. Push and Prepare the Script on Fire TV
-
-The following commands transfer the script to the Fire TV, remove any remaining CRLF characters, grant execution permission, and create the log file before the monitor starts:
-
-```bash
-# Connect to your Fire TV
-adb connect YOUR_FIRE_TV_IP:5555
-
-# Push the script to internal storage
-adb -s YOUR_FIRE_TV_IP:5555 push firetv-remapper.sh /sdcard/
-
-# Convert line endings to LF, grant execution permission, and create the log file
-adb -s YOUR_FIRE_TV_IP:5555 shell "sed -i 's/\r//g' /sdcard/firetv-remapper.sh && chmod +x /sdcard/firetv-remapper.sh && touch /sdcard/firetv-remapper.log"
-```
-
-The `chmod +x` command is required so the script can be executed on the Fire TV.
-
 ## Running the Remapper
 
+On Windows, `run.bat` automatically uploads the current `firetv-remapper.sh` file to the Fire TV, normalizes its line endings, grants execution permission, creates the log file, and starts the service. No manual file transfer or remote file preparation is required.
+
 1. Make sure the Fire TV is turned on and connected to your Wi-Fi network.
+
+1. Confirm that the `IP_ADDRESS` variable in the launcher is correct.
 
 1. Launch `run.bat` on Windows or `run_linux.sh` on Linux.
 
@@ -184,35 +177,27 @@ After starting the service, you can confirm that only one listener is active wit
 adb -s YOUR_FIRE_TV_IP:5555 shell "ps | grep '[g]etevent'"
 ```
 
+On Windows Command Prompt, you can use:
+
+```
+adb -s YOUR_FIRE_TV_IP:5555 shell "ps | findstr /I getevent"
+```
+
 On a normal installation, this should show one `getevent` process. If you restart the launcher, wait a few seconds and run the check again to ensure that an old listener was not left behind.
 
 ## Troubleshooting
 
 ### The script fails with a syntax or interpreter error
 
-This usually indicates that `firetv-remapper.sh` contains Windows CRLF line endings. normalize the file on the Fire TV by running:
-
-```bash
-adb -s YOUR_FIRE_TV_IP:5555 shell "sed -i 's/\r//g' /sdcard/firetv-remapper.sh"
-```
+The Windows launcher automatically normalizes the shell script's line endings before starting it. If the error persists, confirm that the repository's `.gitattributes` configuration preserves LF line endings for shell scripts and restart `run.bat`.
 
 ### Permission denied when starting the script
 
-Grant execution permission again:
-
-```bash
-adb -s YOUR_FIRE_TV_IP:5555 shell "chmod +x /sdcard/firetv-remapper.sh"
-```
+`run.bat` automatically grants execution permission to the remote script each time it starts. Restart the launcher after confirming that the Fire TV is connected and authorized for ADB.
 
 ### `WARNING: Log stream interrupted` appears repeatedly
 
-Create the log file before launching the monitor:
-
-```bash
-adb -s YOUR_FIRE_TV_IP:5555 shell "touch /sdcard/firetv-remapper.log"
-```
-
-Also verify that the script is writing to the same path used by `log_watchdog.bat`.
+`run.bat` automatically creates the remote log file before starting the service. Confirm that the Fire TV is online, that the configured IP address is correct, and that the log monitor is using the same device address as the main launcher.
 
 ### The Fire TV cannot be found after it was working previously
 
@@ -224,3 +209,7 @@ adb connect CURRENT_FIRE_TV_IP:5555
 ```
 
 To avoid this issue, configure a DHCP reservation for the Fire TV in your router.
+
+### The launcher reports that the local script is missing
+
+Make sure that `firetv-remapper.sh` is in the same folder as `run.bat` before starting the launcher.
