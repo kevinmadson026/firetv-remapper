@@ -6,10 +6,10 @@ color 0A
 
 rem ===== Configuration =====
 set "IP_ADDRESS=192.168.1.12:5555"
-set "CHECK_INTERVAL=3"
+set "CHECK_INTERVAL=5"
 set "OFFLINE_INTERVAL=15"
-set "FAIL_CONFIRMATIONS=2"
-set "ALIVE_TIMEOUT=6"
+set "FAIL_CONFIRMATIONS=3"
+set "ALIVE_TIMEOUT=15"
 set "LOOP_TIMEOUT_WARN=20"
 
 set "REMOTE_SCRIPT=/sdcard/firetv-remapper.sh"
@@ -41,11 +41,13 @@ if exist "%LOG_WATCHDOG%" (
 goto main_loop
 
 :main_loop
-call :connect
-if errorlevel 1 goto adb_offline
-
+rem Testa a saude diretamente sem reconectar o ADB a cada iteracao
 call :health
 if not errorlevel 1 goto service_healthy
+
+rem Se a saude falhou, verifica se a conexao ADB caiu antes de incrementar o BAD_COUNT
+call :connect
+if errorlevel 1 goto adb_offline
 
 set /a BAD_COUNT+=1
 if !BAD_COUNT! LSS %FAIL_CONFIRMATIONS% goto health_failure_pending
@@ -92,8 +94,7 @@ adb devices | findstr /R /C:"%IP_ADDRESS%.*device$" >nul 2>&1
 exit /b %errorlevel%
 
 :health
-rem Health check matching the POSIX syntax of the .sh script
-adb -s %IP_ADDRESS% shell "NOW=\$(date +%%s); ALIVE=\$(cat %REMOTE_ALIVE% 2>/dev/null || echo 0); PID=\$(cat %REMOTE_PID% 2>/dev/null || echo 0); STATE=\$(cat %REMOTE_STATE% 2>/dev/null); [ -n \"\$ALIVE\" ] && [ \$((NOW - ALIVE)) -le %ALIVE_TIMEOUT% ] && [ -n \"\$PID\" ] && kill -0 \$PID 2>/dev/null && case \"\$STATE\" in MONITORING|WAITING_DEVICE|RECOVERING_DEVICE) exit 0 ;; *) exit 1 ;; esac" >nul 2>&1
+adb -s %IP_ADDRESS% shell "NOW=$(date +%%s); ALIVE=$(cat %REMOTE_ALIVE% 2>/dev/null || echo 0); PID=$(cat %REMOTE_PID% 2>/dev/null || echo 0); STATE=$(cat %REMOTE_STATE% 2>/dev/null); [ -n \"$ALIVE\" ] && [ $((NOW - ALIVE)) -le %ALIVE_TIMEOUT% ] && [ -n \"$PID\" ] && kill -0 $PID 2>/dev/null && case \"$STATE\" in MONITORING|WAITING_DEVICE|RECOVERING_DEVICE) exit 0 ;; *) exit 1 ;; esac" >nul 2>&1
 if errorlevel 1 exit /b 1
 exit /b 0
 
