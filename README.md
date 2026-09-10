@@ -120,6 +120,6 @@ adb -s YOUR_FIRE_TV_IP:5555 push firetv-remapper.sh /sdcard/
 ## 🚀 How to Run
 
 1. Ensure your Fire TV is turned on and connected to your Wi-Fi network.
-2. Launch `run.bat` on your PC by double-clicking it.
+2. Launch `run.bat` or `run_linux.sh`
 3. If a dialog appears on your Fire TV asking **"Allow USB debugging?"**, check **"Always allow from this computer"** and select **OK**.
-4. **Keep the command prompt window running on your PC.** The host script will maintain the active connection and automatically restart the monitoring loop every 3 minutes to prevent process termination.
+4. **Keep the command prompt running.** The host script will maintain the active connection and automatically restart the monitoring loop every 3 minutes to prevent process termination.
