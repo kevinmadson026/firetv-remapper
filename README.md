@@ -38,7 +38,9 @@ Before running the script, make sure that:
 
 1. ADB debugging is enabled on the Fire TV Stick.
 
-1. On Windows, Bash scripts retain Unix-style LF line endings. If you clone the repository on Windows, configure `.gitattributes` accordingly.
+1. ADB is installed and available in your computer's terminal or Command Prompt.
+
+1. The repository's `.gitattributes` file is configured to preserve Unix-style LF line endings for shell scripts.
 
 ## Optional: Capture Button Event Codes
 
@@ -95,7 +97,7 @@ adb shell pm list packages | grep -i "youtube"
 
 ### Method 2: Using a Web Browser
 
-Find the application page on the Google Play Store or APKMirror and look for the `id` parameter in the URL.
+Find the application's page on the Google Play Store or APKMirror and look for the `id` parameter in the URL.
 
 For example:
 
@@ -130,9 +132,9 @@ APP03_PACKAGE="org.videolan.vlc"               # Disney+ button
 APP04_PACKAGE="com.esaba.downloader"           # Hulu button
 ```
 
-### 3. Push the Script to Fire TV
+### 3. Push and Prepare the Script on Fire TV
 
-Transfer the script to the Fire TV, convert its line endings, grant execution permissions, and initialize the log file:
+The following commands transfer the script to the Fire TV, remove any remaining CRLF characters, grant execution permission, and create the log file before the monitor starts:
 
 ```bash
 # Connect to your Fire TV
@@ -141,8 +143,18 @@ adb connect YOUR_FIRE_TV_IP:5555
 # Push the script to internal storage
 adb -s YOUR_FIRE_TV_IP:5555 push firetv-remapper.sh /sdcard/
 
-# Convert line endings to LF, grant execution permissions, and create the log file
+# Convert line endings to LF, grant execution permission, and create the log file
 adb -s YOUR_FIRE_TV_IP:5555 shell "sed -i 's/\r//g' /sdcard/firetv-remapper.sh && chmod +x /sdcard/firetv-remapper.sh && touch /sdcard/firetv-remapper.log"
+```
+
+The `chmod +x` command is required so the script can be executed on the Fire TV. The `touch` command creates `/sdcard/firetv-remapper.log` before `log_watchdog.bat` tries to follow it, preventing repeated `WARNING: Log stream interrupted` messages during the first run.
+
+If you prefer to run the preparation commands separately, use:
+
+```bash
+adb -s YOUR_FIRE_TV_IP:5555 push firetv-remapper.sh /sdcard/
+adb -s YOUR_FIRE_TV_IP:5555 shell "chmod +x /sdcard/firetv-remapper.sh"
+adb -s YOUR_FIRE_TV_IP:5555 shell "touch /sdcard/firetv-remapper.log"
 ```
 
 ## Running the Remapper
@@ -153,4 +165,34 @@ adb -s YOUR_FIRE_TV_IP:5555 shell "sed -i 's/\r//g' /sdcard/firetv-remapper.sh &
 
 1. If the Fire TV displays an **Allow USB debugging?** dialog, select **Always allow from this computer** and then choose **OK**.
 
-1. Keep the command prompt or terminal window open. The host script maintains the connection and automatically restarts the monitoring loop every three minutes to prevent the listener from being terminated.
+1. Keep the Command Prompt or terminal window open. The host script maintains the connection and automatically restarts the monitoring loop every three minutes to prevent the listener from being terminated.
+
+## Troubleshooting
+
+### The script fails with a syntax or interpreter error
+
+This usually indicates that `firetv-remapper.sh` contains Windows CRLF line endings. Make sure the repository's `.gitattributes` configuration preserves LF line endings for shell scripts.
+
+You can also normalize the file on the Fire TV by running:
+
+```bash
+adb -s YOUR_FIRE_TV_IP:5555 shell "sed -i 's/\r//g' /sdcard/firetv-remapper.sh"
+```
+
+### Permission denied when starting the script
+
+Grant execution permission again:
+
+```bash
+adb -s YOUR_FIRE_TV_IP:5555 shell "chmod +x /sdcard/firetv-remapper.sh"
+```
+
+### `WARNING: Log stream interrupted` appears repeatedly
+
+Create the log file before launching the monitor:
+
+```bash
+adb -s YOUR_FIRE_TV_IP:5555 shell "touch /sdcard/firetv-remapper.log"
+```
+
+Also verify that the script is writing to the same path used by `log_watchdog.bat`.
