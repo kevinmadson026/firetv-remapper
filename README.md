@@ -91,7 +91,7 @@ You can install apps like **Background Apps and Processes** or **App Inspector**
 ## 🛠️ Configuration & Setup
 
 ### 1. Set Your Fire TV IP Address
-Open `run.bat` on your PC using a text editor (e.g., Notepad) and update the `IP_ADDRESS` variable:
+Open run.bat (Windows) or run_linux.sh (Linux) in a text editor like Notepad, then update the IP_ADDRESS variable.
 
 ```bat
 set IP_ADDRESS=192.168.1.7:5555
