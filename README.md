@@ -166,15 +166,7 @@ adb -s YOUR_FIRE_TV_IP:5555 push firetv-remapper.sh /sdcard/
 adb -s YOUR_FIRE_TV_IP:5555 shell "sed -i 's/\r//g' /sdcard/firetv-remapper.sh && chmod +x /sdcard/firetv-remapper.sh && touch /sdcard/firetv-remapper.log"
 ```
 
-The `chmod +x` command is required so the script can be executed on the Fire TV. The `touch` command creates `/sdcard/firetv-remapper.log` before `log_watchdog.bat` tries to follow it, preventing repeated `WARNING: Log stream interrupted` messages during the first run.
-
-If you prefer to run the preparation commands separately, use:
-
-```bash
-adb -s YOUR_FIRE_TV_IP:5555 push firetv-remapper.sh /sdcard/
-adb -s YOUR_FIRE_TV_IP:5555 shell "chmod +x /sdcard/firetv-remapper.sh"
-adb -s YOUR_FIRE_TV_IP:5555 shell "touch /sdcard/firetv-remapper.log"
-```
+The `chmod +x` command is required so the script can be executed on the Fire TV.
 
 ## Running the Remapper
 
