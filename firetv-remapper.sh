@@ -1,11 +1,7 @@
 #!/system/bin/sh
 
-# Fire TV Remote Button Remapper (v2 - Aggressive Health Watchdog)
-# - A new execution terminates the previous instance before taking over the service.
-# - A background "alive" pulse updates firetv-remapper.alive every second, EVEN IF
-#   getevent gets stuck waiting for an event that never arrives (e.g. TV off).
-# - On exit, the alive pulse is removed so the Windows watchdog detects the death
-#   immediately (heartbeat age > ALIVE_TIMEOUT in run.bat).
+# Fire TV Remote Button Remapper
+# Versão com timeout de getevent e marcador de progresso para o watchdog.
 
 BASE_DIR="/sdcard"
 PID_FILE="$BASE_DIR/firetv-remapper.pid"
@@ -13,12 +9,15 @@ HEARTBEAT_FILE="$BASE_DIR/firetv-remapper.heartbeat"
 STATE_FILE="$BASE_DIR/firetv-remapper.state"
 LOCK_FILE="$BASE_DIR/firetv-remapper.lock"
 ALIVE_FILE="$BASE_DIR/firetv-remapper.alive"
+LOOPSTART_FILE="$BASE_DIR/firetv-remapper.loopstart"
+EVENT_FILE="$BASE_DIR/firetv-remapper.event"
 LOG_TAG="firetv-remapper"
+EVENT_TIMEOUT=10
 
-APP01_PACKAGE="com.google.android.youtube.tv" # Target app for Prime Video button
-APP02_PACKAGE="org.xbmc.kodi"                  # Target app for Netflix button
-APP03_PACKAGE="org.videolan.vlc"               # Target app for Disney+ button
-APP04_PACKAGE="com.esaba.downloader"           # Target app for Hulu button
+APP01_PACKAGE="org.smarttube.stable"
+APP02_PACKAGE="com.lazerplayer.app"
+APP03_PACKAGE="com.instantbits.cast.receiver"
+APP04_PACKAGE="de.belu.appstarter"
 
 PRIME_PACKAGE="com.amazon.firebat"
 NETFLIX_PACKAGE="com.netflix.ninja"
@@ -39,7 +38,6 @@ write_state() {
 }
 
 stop_all_getevent() {
-    # killall works on Fire OS and terminates all previous getevent processes.
     killall getevent >/dev/null 2>&1
     sleep 1
     killall getevent >/dev/null 2>&1
@@ -48,10 +46,9 @@ stop_all_getevent() {
 stop_previous_instance() {
     OLD_PID=$(cat "$PID_FILE" 2>/dev/null)
 
-    # Terminates all old copies of the remapper itself, not only the one in the PID file.
     for REMAPPER_PID in $(ps 2>/dev/null | awk '$0 ~ /[f]iretv-remapper\.sh/ {print $1}'); do
         if [ "$REMAPPER_PID" != "$$" ]; then
-            log "Terminating previous remapper (PID $REMAPPER_PID)."
+            log "Terminando remapper anterior, PID $REMAPPER_PID."
             kill "$REMAPPER_PID" 2>/dev/null
         fi
     done
@@ -61,48 +58,43 @@ stop_previous_instance() {
     fi
 
     sleep 1
+
     for REMAPPER_PID in $(ps 2>/dev/null | awk '$0 ~ /[f]iretv-remapper\.sh/ {print $1}'); do
         if [ "$REMAPPER_PID" != "$$" ]; then
             kill -9 "$REMAPPER_PID" 2>/dev/null
         fi
     done
 
-    # Only after stopping all copies does it remove all old getevent processes.
     stop_all_getevent
-    rm -f "$ALIVE_FILE"
+    rm -f "$ALIVE_FILE" "$HEARTBEAT_FILE" "$LOOPSTART_FILE" "$EVENT_FILE"
 }
 
 stop_previous_instance
 echo "$$" > "$PID_FILE"
 write_state "STARTING"
 
-# ---------------------------------------------------------------------------
-# ALIVE PULSE (the aggressive watchdog mechanism)
-# A detached loop keeps updating the "alive" file every second, independently
-# of the main loop. If getevent blocks forever (TV turned off, Bluetooth
-# disconnect), the pulse keeps ticking while the script is healthy and simply
-# WAITING for a device. If the whole process dies or is killed, the pulse
-# stops immediately and run.bat detects it within seconds.
-# ---------------------------------------------------------------------------
 pulse_worker() {
     while true; do
         date +%s > "$ALIVE_FILE"
         sleep 1
-    done
+done
 }
+
 pulse_worker &
 PULSE_PID=$!
 
 cleanup() {
     CURRENT_PID=$(cat "$PID_FILE" 2>/dev/null)
-    # The old instance must not delete the files that already belong to the new one.
+
     if [ "$CURRENT_PID" = "$$" ]; then
-        kill "$PULSE_PID" 2>/dev/null
+        [ -n "$EVENT_PID" ] && kill "$EVENT_PID" 2>/dev/null
         write_state "STOPPED"
-        rm -f "$ALIVE_FILE" "$HEARTBEAT_FILE" "$PID_FILE" "$LOCK_FILE"
+        rm -f "$ALIVE_FILE" "$HEARTBEAT_FILE" "$LOOPSTART_FILE" "$EVENT_FILE" "$PID_FILE" "$LOCK_FILE"
     fi
+
     exit 0
 }
+
 trap cleanup INT TERM HUP EXIT
 
 closeapps() {
@@ -137,33 +129,77 @@ launch_app() {
     monkey -p "$PACKAGE" -c android.intent.category.LAUNCHER 1 >/dev/null 2>&1
 }
 
-# ---------------------------------------------------------------------------
+# Lê somente um evento e impede que getevent fique preso indefinidamente.
+# O loopstart permite ao run.bat detectar um getevent travado.
+read_event() {
+    rm -f "$EVENT_FILE"
+    date +%s > "$LOOPSTART_FILE"
+
+    getevent -t -c 1 "$TARGET_DEVICE" > "$EVENT_FILE" 2>/dev/null &
+    EVENT_PID=$!
+    WAITED=0
+
+    while kill -0 "$EVENT_PID" 2>/dev/null; do
+        date +%s > "$ALIVE_FILE"
+        date +%s > "$HEARTBEAT_FILE"
+        sleep 1
+        WAITED=$((WAITED + 1))
+
+        if [ "$WAITED" -ge "$EVENT_TIMEOUT" ]; then
+            log "Timeout aguardando evento; encerrando getevent PID $EVENT_PID."
+            kill "$EVENT_PID" 2>/dev/null
+            sleep 1
+            kill -9 "$EVENT_PID" 2>/dev/null
+            wait "$EVENT_PID" 2>/dev/null
+            EVENT_PID=""
+            rm -f "$LOOPSTART_FILE" "$EVENT_FILE"
+            return 1
+        fi
+    done
+
+    wait "$EVENT_PID" 2>/dev/null
+    EVENT_PID=""
+    rm -f "$LOOPSTART_FILE"
+    return 0
+}
 
 TARGET_DEVICE=""
 write_state "WAITING_DEVICE"
-log "Service started; waiting for the remote control."
+date +%s > "$ALIVE_FILE"
+date +%s > "$HEARTBEAT_FILE"
+log "Serviço iniciado; aguardando o controle remoto."
 
 while true; do
+    date +%s > "$ALIVE_FILE"
     date +%s > "$HEARTBEAT_FILE"
 
     if [ -z "$TARGET_DEVICE" ] || [ ! -e "$TARGET_DEVICE" ]; then
         write_state "WAITING_DEVICE"
         TARGET_DEVICE=$(find_target_device)
+
         if [ -z "$TARGET_DEVICE" ]; then
             sleep 2
             continue
         fi
-        log "Remote detected at $TARGET_DEVICE."
+
+        log "Controle remoto detectado em $TARGET_DEVICE."
     fi
 
     write_state "MONITORING"
-    # This call is sequential; with a single instance of the script, at most one
-    # monitoring getevent is created by this service.
-    line=$(getevent -t -c 1 "$TARGET_DEVICE" 2>/dev/null)
-    if [ -z "$line" ]; then
+
+    if ! read_event; then
         TARGET_DEVICE=""
         write_state "RECOVERING_DEVICE"
         sleep 1
+        continue
+    fi
+
+    line=$(cat "$EVENT_FILE" 2>/dev/null)
+    rm -f "$EVENT_FILE"
+
+    if [ -z "$line" ]; then
+        TARGET_DEVICE=""
+        write_state "RECOVERING_DEVICE"
         continue
     fi
 
@@ -171,28 +207,28 @@ while true; do
         *" 0001 $TARGET_EVENT_PRIMEVIDEO 00000001"*)
             touch "$LOCK_FILE"
             write_state "HANDLING_PRIMEVIDEO"
-            log "Prime Video button detected; opening $APP01_PACKAGE."
+            log "Botão Prime Video detectado; abrindo $APP01_PACKAGE."
             launch_app "$APP01_PACKAGE"
             rm -f "$LOCK_FILE"
             ;;
         *" 0001 $TARGET_EVENT_NETFLIX 00000001"*)
             touch "$LOCK_FILE"
             write_state "HANDLING_NETFLIX"
-            log "Netflix button detected; opening $APP02_PACKAGE."
+            log "Botão Netflix detectado; abrindo $APP02_PACKAGE."
             launch_app "$APP02_PACKAGE"
             rm -f "$LOCK_FILE"
             ;;
         *" 0001 $TARGET_EVENT_DISNEY 00000001"*)
             touch "$LOCK_FILE"
             write_state "HANDLING_DISNEY"
-            log "Disney+ button detected; opening $APP03_PACKAGE."
+            log "Botão Disney+ detectado; abrindo $APP03_PACKAGE."
             launch_app "$APP03_PACKAGE"
             rm -f "$LOCK_FILE"
             ;;
         *" 0001 $TARGET_EVENT_HULU 00000001"*)
             touch "$LOCK_FILE"
             write_state "HANDLING_HULU"
-            log "Hulu button detected; opening $APP04_PACKAGE."
+            log "Botão Hulu detectado; abrindo $APP04_PACKAGE."
             launch_app "$APP04_PACKAGE"
             rm -f "$LOCK_FILE"
             ;;

@@ -17,7 +17,7 @@ set "CHECK_INTERVAL=5"
 set "OFFLINE_INTERVAL=15"
 set "FAIL_CONFIRMATIONS=3"
 set "ALIVE_TIMEOUT=15"
-set "LOOP_TIMEOUT_WARN=20"
+set "LOOP_TIMEOUT=20"
 
 set "REMOTE_SCRIPT=/sdcard/firetv-remapper.sh"
 set "REMOTE_LOG=/sdcard/firetv-remapper.log"
@@ -135,7 +135,7 @@ adb devices | findstr /R /C:"%IP_ADDRESS%.*device$" >nul 2>&1
 exit /b %errorlevel%
 
 :health
-adb -s %IP_ADDRESS% shell "NOW=$(date +%%s); ALIVE=$(cat %REMOTE_ALIVE% 2>/dev/null || echo 0); PID=$(cat %REMOTE_PID% 2>/dev/null || echo 0); STATE=$(cat %REMOTE_STATE% 2>/dev/null); [ -n \"$ALIVE\" ] && [ $((NOW - ALIVE)) -le %ALIVE_TIMEOUT% ] && [ -n \"$PID\" ] && kill -0 $PID 2>/dev/null && case \"$STATE\" in MONITORING|WAITING_DEVICE|RECOVERING_DEVICE) exit 0 ;; *) exit 1 ;; esac" >nul 2>&1
+adb -s %IP_ADDRESS% shell "NOW=$(date +%%s); ALIVE=$(cat %REMOTE_ALIVE% 2>/dev/null || echo 0); PID=$(cat %REMOTE_PID% 2>/dev/null || echo 0); STATE=$(cat %REMOTE_STATE% 2>/dev/null); LOOP=$(cat %REMOTE_LOOPSTART% 2>/dev/null || echo 0); [ -n \"$ALIVE\" ] && [ $((NOW - ALIVE)) -le %ALIVE_TIMEOUT% ] && [ -n \"$PID\" ] && kill -0 $PID 2>/dev/null && case \"$STATE\" in MONITORING|WAITING_DEVICE|RECOVERING_DEVICE) true ;; *) exit 1 ;; esac && { [ \"$STATE\" != MONITORING ] || [ $((NOW - LOOP)) -le %LOOP_TIMEOUT% ]; }" >nul 2>&1
 if errorlevel 1 exit /b 1
 exit /b 0
 
@@ -169,8 +169,8 @@ call :restart_service
 exit /b %errorlevel%
 
 :restart_service
-rem Stop event capture and remove stale state before starting one fresh instance.
-adb -s %IP_ADDRESS% shell "killall getevent 2>/dev/null" >nul 2>&1
+rem Stop event capture and the old remapper before starting one fresh instance.
+adb -s %IP_ADDRESS% shell "killall getevent 2>/dev/null; OLD=$(cat %REMOTE_PID% 2>/dev/null || echo 0); [ \"$OLD\" != 0 ] && kill $OLD 2>/dev/null || true" >nul 2>&1
 if errorlevel 1 (
     echo [%TIME%] Warning: could not stop a previous getevent process; continuing.
 )
