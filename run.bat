@@ -1,6 +1,12 @@
 @echo off
 setlocal EnableExtensions EnableDelayedExpansion
 
+rem Relaunch in a persistent Command Prompt when started by double-click.
+if /I not "%~1"=="__RUNNER" (
+    start "FireTV Remapper" "%ComSpec%" /k call "%~f0" __RUNNER
+    exit /b 0
+)
+
 title FireTV Remapper - Aggressive Health Watchdog
 color 0A
 
@@ -25,6 +31,12 @@ set "REMOTE_LOOPSTART=/sdcard/firetv-remapper.loopstart"
 set "SCRIPT_DIR=%~dp0"
 set "LOCAL_SCRIPT=%SCRIPT_DIR%firetv-remapper.sh"
 set "LOG_WATCHDOG=%SCRIPT_DIR%log_watchdog.bat"
+set "DEBUG_LOG=%SCRIPT_DIR%run-debug.log"
+
+cd /d "%SCRIPT_DIR%"
+
+echo.>>"%DEBUG_LOG%"
+echo [%DATE% %TIME%] Launcher started.>>"%DEBUG_LOG%"
 
 set /a BAD_COUNT=0
 set /a RESTART_COUNT=0
@@ -37,17 +49,27 @@ if errorlevel 1 goto startup_failed
 goto start_log_watchdog
 
 :initial_offline
-:startup_failed
-if errorlevel 1 echo [%TIME%] Fire TV is offline or the service could not be started. Waiting for connection...
+echo [%TIME%] Fire TV is offline or not authorized for ADB.
+echo [%TIME%] Confirm IP_ADDRESS, network connection, and the USB debugging authorization dialog.
+echo [%TIME%] The launcher will keep running and retry the connection.
+echo [%DATE% %TIME%] Initial ADB connection failed.>>"%DEBUG_LOG%"
 
 goto start_log_watchdog
 
+:startup_failed
+echo [%TIME%] The service could not be started.
+echo [%TIME%] Check the error above, confirm that firetv-remapper.sh is next to run.bat, and verify the Fire TV connection.
+echo [%DATE% %TIME%] Service startup failed.>>"%DEBUG_LOG%"
+pause
+goto start_log_watchdog
+
 :start_log_watchdog
-if exist "%LOG_WATCHDOG%" (
-    start "FireTV - Real-Time Log" cmd /k call "%LOG_WATCHDOG%" "%IP_ADDRESS%" "%REMOTE_LOG%"
-) else (
-    echo [%TIME%] WARNING: %LOG_WATCHDOG% was not found; automatic logging disabled.
-)
+if not exist "%LOG_WATCHDOG%" goto log_watchdog_missing
+start "FireTV - Real-Time Log" "%ComSpec%" /k call "%LOG_WATCHDOG%" "%IP_ADDRESS%" "%REMOTE_LOG%"
+goto main_loop
+
+:log_watchdog_missing
+echo [%TIME%] WARNING: %LOG_WATCHDOG% was not found; automatic logging disabled.
 
 goto main_loop
 
@@ -131,6 +153,7 @@ echo [%TIME%] Uploading firetv-remapper.sh to the Fire TV...
 adb -s %IP_ADDRESS% push "%LOCAL_SCRIPT%" "%REMOTE_SCRIPT%" >nul 2>&1
 if errorlevel 1 (
     echo [%TIME%] Failed to upload firetv-remapper.sh.
+    echo [%TIME%] Verify that the Fire TV is connected and authorized with: adb devices
     exit /b 1
 )
 
@@ -138,6 +161,7 @@ echo [%TIME%] Preparing the remote script and log file...
 adb -s %IP_ADDRESS% shell "sed -i 's/\r//g' %REMOTE_SCRIPT% && chmod +x %REMOTE_SCRIPT% && touch %REMOTE_LOG%" >nul 2>&1
 if errorlevel 1 (
     echo [%TIME%] Failed to prepare the remote script or log file.
+    echo [%TIME%] Verify that ADB debugging is enabled and that %IP_ADDRESS% is reachable.
     exit /b 1
 )
 
@@ -145,9 +169,32 @@ call :restart_service
 exit /b %errorlevel%
 
 :restart_service
-rem Stop the previous service instance, remove stale state files, and start one fresh instance.
-adb -s %IP_ADDRESS% shell "PID=\$(cat %REMOTE_PID% 2>/dev/null); [ -n \"\$PID\" ] && kill -9 \$PID 2>/dev/null; killall getevent 2>/dev/null; rm -f %REMOTE_LOCK% %REMOTE_STATE% %REMOTE_ALIVE% %REMOTE_LOOPSTART% %REMOTE_PID%; touch %REMOTE_LOG%; nohup sh %REMOTE_SCRIPT% > %REMOTE_LOG% 2>&1 &" >nul 2>&1
-exit /b %errorlevel%
+rem Stop event capture and remove stale state before starting one fresh instance.
+adb -s %IP_ADDRESS% shell "killall getevent 2>/dev/null" >nul 2>&1
+if errorlevel 1 (
+    echo [%TIME%] Warning: could not stop a previous getevent process; continuing.
+)
+
+adb -s %IP_ADDRESS% shell "rm -f %REMOTE_LOCK% %REMOTE_STATE% %REMOTE_ALIVE% %REMOTE_LOOPSTART% %REMOTE_PID%" >nul 2>&1
+if errorlevel 1 (
+    echo [%TIME%] Failed to remove stale remote state files.
+    exit /b 1
+)
+
+adb -s %IP_ADDRESS% shell "touch %REMOTE_LOG%" >nul 2>&1
+if errorlevel 1 (
+    echo [%TIME%] Failed to create the remote log file.
+    exit /b 1
+)
+
+rem The script terminates any previous remapper instance during its own startup.
+adb -s %IP_ADDRESS% shell "nohup sh %REMOTE_SCRIPT% > %REMOTE_LOG% 2>&1 &" >nul 2>&1
+if errorlevel 1 (
+    echo [%TIME%] Failed to launch the remote script.
+    exit /b 1
+)
+
+exit /b 0
 
 :is_screen_on
 adb -s %IP_ADDRESS% shell "dumpsys power" | findstr /I /C:"mWakefulness=Awake" >nul 2>&1
