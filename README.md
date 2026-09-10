@@ -34,7 +34,7 @@ Because Amazon Fire OS aggressively manages memory and frequently kills backgrou
 Before running the script, ensure:
 1. Your PC and Fire TV Stick are connected to the **same local Wi-Fi network**.
 2. **ADB Debugging** is enabled on your Fire TV Stick.
-3. **Git Line Endings (Windows Users):** If you clone this repository on Windows, ensure bash scripts retain LF (Unix) line endings by setting up `.gitattributes`.
+3. **Git Line Endings (Windows Users):** Ensure bash scripts retain LF (Unix) line endings when cloned on Windows.
 
 ### Manual Event Code Capture (Optional)
 If your remote control model differs from the standard layout, you can capture button codes manually:
