@@ -198,9 +198,7 @@ On a normal installation, this should show one `getevent` process. If you restar
 
 ### The script fails with a syntax or interpreter error
 
-This usually indicates that `firetv-remapper.sh` contains Windows CRLF line endings. Make sure the repository's `.gitattributes` configuration preserves LF line endings for shell scripts.
-
-You can also normalize the file on the Fire TV by running:
+This usually indicates that `firetv-remapper.sh` contains Windows CRLF line endings. normalize the file on the Fire TV by running:
 
 ```bash
 adb -s YOUR_FIRE_TV_IP:5555 shell "sed -i 's/\r//g' /sdcard/firetv-remapper.sh"
