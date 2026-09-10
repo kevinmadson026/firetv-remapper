@@ -42,6 +42,19 @@ Before running the script, make sure that:
 
 1. The repository's `.gitattributes` file is configured to preserve Unix-style LF line endings for shell scripts.
 
+1. Your Fire TV IP address is correct and the Fire TV is authorized for ADB connections.
+
+If your router assigns IP addresses automatically, consider creating a DHCP reservation for the Fire TV. Otherwise, its IP address may change and you may need to update `run.bat` or `run_linux.sh`.
+
+Before pushing the script, verify the ADB connection:
+
+```bash
+adb connect YOUR_FIRE_TV_IP:5555
+adb devices
+```
+
+The Fire TV should appear with the status `device`. If the status is `unauthorized`, approve the **Allow USB debugging?** dialog on the Fire TV. If it is `offline`, confirm that both devices are on the same network and reconnect with `adb disconnect YOUR_FIRE_TV_IP:5555` followed by `adb connect YOUR_FIRE_TV_IP:5555`.
+
 ## Optional: Capture Button Event Codes
 
 If your remote-control model uses a different button layout, you can capture the button codes manually:
@@ -91,8 +104,14 @@ This is the fastest method:
 # Connect to your Fire TV
 adb connect YOUR_FIRE_TV_IP:5555
 
-# List installed packages matching a keyword
+# List installed packages matching a keyword on Linux, macOS, Git Bash, or WSL
 adb shell pm list packages | grep -i "youtube"
+```
+
+On Windows Command Prompt, use `findstr` instead:
+
+```
+adb shell pm list packages | findstr /I youtube
 ```
 
 ### Method 2: Using a Web Browser
@@ -165,7 +184,15 @@ adb -s YOUR_FIRE_TV_IP:5555 shell "touch /sdcard/firetv-remapper.log"
 
 1. If the Fire TV displays an **Allow USB debugging?** dialog, select **Always allow from this computer** and then choose **OK**.
 
-1. Keep the Command Prompt or terminal window open. The host script maintains the connection and automatically restarts the monitoring loop every three minutes to prevent the listener from being terminated.
+1. Keep the Command Prompt or terminal window open. The host script maintains the connection and automatically restarts the monitoring loop every three minutes to prevent the listener from being terminated. Closing the launcher window stops the host-side watchdog, so button remapping may stop working.
+
+After starting the service, you can confirm that only one listener is active with:
+
+```bash
+adb -s YOUR_FIRE_TV_IP:5555 shell "ps | grep '[g]etevent'"
+```
+
+On a normal installation, this should show one `getevent` process. If you restart the launcher, wait a few seconds and run the check again to ensure that an old listener was not left behind.
 
 ## Troubleshooting
 
@@ -196,3 +223,14 @@ adb -s YOUR_FIRE_TV_IP:5555 shell "touch /sdcard/firetv-remapper.log"
 ```
 
 Also verify that the script is writing to the same path used by `log_watchdog.bat`.
+
+### The Fire TV cannot be found after it was working previously
+
+The router may have assigned a new IP address to the Fire TV. Find the current address under **Settings > My Fire TV > About > Network**, update `IP_ADDRESS` in the appropriate launcher, and reconnect:
+
+```bash
+adb disconnect YOUR_FIRE_TV_IP:5555
+adb connect CURRENT_FIRE_TV_IP:5555
+```
+
+To avoid this issue, configure a DHCP reservation for the Fire TV in your router.
