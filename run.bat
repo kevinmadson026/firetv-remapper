@@ -41,6 +41,14 @@ if exist "%LOG_WATCHDOG%" (
 goto main_loop
 
 :main_loop
+rem Se a tela estiver desligada/standby, ignora a checagem para nao acordar a TV
+call :is_screen_on
+if errorlevel 1 (
+    set /a BAD_COUNT=0
+    timeout /t %CHECK_INTERVAL% /nobreak >nul
+    goto main_loop
+)
+
 rem Testa a saude diretamente sem reconectar o ADB a cada iteracao
 call :health
 if not errorlevel 1 goto service_healthy
@@ -117,3 +125,7 @@ exit /b 1
 rem Targeted termination by PID to avoid killing the shell or resetting temporary states globally
 adb -s %IP_ADDRESS% shell "PID=\$(cat %REMOTE_PID% 2>/dev/null); [ -n \"\$PID\" ] && kill -9 \$PID 2>/dev/null; killall getevent 2>/dev/null; rm -f %REMOTE_LOCK% %REMOTE_STATE% %REMOTE_ALIVE% %REMOTE_LOOPSTART% %REMOTE_PID%; nohup sh %REMOTE_SCRIPT% > %REMOTE_LOG% 2>&1 &" >nul 2>&1
 exit /b 0
+
+:is_screen_on
+adb -s %IP_ADDRESS% shell "dumpsys power" | findstr /I /C:"mWakefulness=Awake" >nul 2>&1
+exit /b %errorlevel%
