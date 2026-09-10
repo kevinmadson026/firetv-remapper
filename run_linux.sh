@@ -1,7 +1,7 @@
 #!/bin/bash
 
 # ===== Configuração =====
-IP_ADDRESS="192.168.1.16:5555"
+IP_ADDRESS="192.168.1.12:5555"
 CHECK_INTERVAL=3
 OFFLINE_INTERVAL=15
 FAIL_CONFIRMATIONS=2
@@ -21,25 +21,50 @@ RESTART_COUNT=0
 connect_adb() {
     adb start-server >/dev/null 2>&1
     adb connect "$IP_ADDRESS" >/dev/null 2>&1
-    adb -s "$IP_ADDRESS" get-state >/dev/null 2>&1
-    return $?
+    
+    # Pausa para o handshake de rede do ADB concluir
+    sleep 1
+    
+    # Valida se o dispositivo está realmente conectado e autorizado
+    if adb devices | grep -q "${IP_ADDRESS}.*device$"; then
+        return 0
+    else
+        return 1
+    fi
 }
 
 check_health() {
-    adb -s "$IP_ADDRESS" shell "NOW=\$(date +%s); ALIVE=\$(cat $REMOTE_ALIVE 2>/dev/null); PID=\$(cat $REMOTE_PID 2>/dev/null); STATE=\$(cat $REMOTE_STATE 2>/dev/null); [ -n \"\$ALIVE\" ] && [ \$((\$NOW-\$ALIVE)) -le $ALIVE_TIMEOUT ] && [ -n \"\$PID\" ] && kill -0 \$PID 2>/dev/null && [ \"\$STATE\" = \"MONITORING\" -o \"\$STATE\" = \"WAITING_DEVICE\" -o \"\$STATE\" = \"RECOVERING_DEVICE\" ]"
+    # Execução remota validando tempo de vida (heartbeat), PID ativo e estado válido
+    adb -s "$IP_ADDRESS" shell "
+        NOW=\$(date +%s)
+        ALIVE=\$(cat $REMOTE_ALIVE 2>/dev/null || echo 0)
+        PID=\$(cat $REMOTE_PID 2>/dev/null || echo 0)
+        STATE=\$(cat $REMOTE_STATE 2>/dev/null)
+        
+        [ -n \"\$ALIVE\" ] && [ \$((NOW - ALIVE)) -le $ALIVE_TIMEOUT ] && \
+        [ -n \"\$PID\" ] && kill -0 \$PID 2>/dev/null && \
+        case \"\$STATE\" in
+            MONITORING|WAITING_DEVICE|RECOVERING_DEVICE) exit 0 ;;
+            *) exit 1 ;;
+        esac
+    " >/dev/null 2>&1
     return $?
 }
 
 is_busy() {
-    adb -s "$IP_ADDRESS" shell "test -e $REMOTE_LOCK"
+    adb -s "$IP_ADDRESS" shell "test -e $REMOTE_LOCK" >/dev/null 2>&1
     return $?
 }
 
 restart_service() {
-    adb -s "$IP_ADDRESS" shell "killall sh" >/dev/null 2>&1
-    adb -s "$IP_ADDRESS" shell "killall getevent" >/dev/null 2>&1
-    adb -s "$IP_ADDRESS" shell "rm -f $REMOTE_LOCK $REMOTE_STATE $REMOTE_ALIVE $REMOTE_LOOPSTART" >/dev/null 2>&1
-    adb -s "$IP_ADDRESS" shell "nohup sh $REMOTE_SCRIPT > $REMOTE_LOG 2>&1 &" >/dev/null 2>&1
+    # Mata de forma direcionada apenas o PID do script (evitando killall sh global)
+    adb -s "$IP_ADDRESS" shell "
+        PID=\$(cat $REMOTE_PID 2>/dev/null)
+        [ -n \"\$PID\" ] && kill -9 \$PID 2>/dev/null
+        killall getevent 2>/dev/null
+        rm -f $REMOTE_LOCK $REMOTE_STATE $REMOTE_ALIVE $REMOTE_LOOPSTART $REMOTE_PID
+        nohup sh $REMOTE_SCRIPT > $REMOTE_LOG 2>&1 &
+    " >/dev/null 2>&1
     return $?
 }
 
@@ -53,7 +78,7 @@ ensure_started() {
     restart_service
 }
 
-# Início do Script
+# ===== Início do Script =====
 connect_adb
 if [ $? -eq 0 ]; then
     ensure_started
