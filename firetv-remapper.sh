@@ -38,6 +38,11 @@ write_state() {
     echo "$1" > "$STATE_FILE"
 }
 
+is_device_awake() {
+    dumpsys power 2>/dev/null | grep -Eq \
+        'mWakefulness=Awake|mWakefulness=Dreaming|Display Power: state=ON'
+}
+
 stop_all_getevent() {
     # killall works on Fire OS and terminates all previous getevent processes.
     killall getevent >/dev/null 2>&1
@@ -171,6 +176,14 @@ while true; do
     # Mark loop start so the stuck guard can age this iteration.
     date +%s > "$BASE_DIR/firetv-remapper.loopstart"
     date +%s > "$HEARTBEAT_FILE"
+
+    # Do not query input devices while the Fire TV is asleep.
+    if ! is_device_awake; then
+        write_state "SLEEPING"
+        TARGET_DEVICE=""
+        sleep 3
+        continue
+    fi
 
     if [ -z "$TARGET_DEVICE" ] || [ ! -e "$TARGET_DEVICE" ]; then
         write_state "WAITING_DEVICE"

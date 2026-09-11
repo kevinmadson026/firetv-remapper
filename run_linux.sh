@@ -44,7 +44,7 @@ check_health() {
         [ -n \"\$ALIVE\" ] && [ \$((NOW - ALIVE)) -le $ALIVE_TIMEOUT ] && \
         [ -n \"\$PID\" ] && kill -0 \$PID 2>/dev/null && \
         case \"\$STATE\" in
-            MONITORING|WAITING_DEVICE|RECOVERING_DEVICE) exit 0 ;;
+            MONITORING|WAITING_DEVICE|RECOVERING_DEVICE|SLEEPING) exit 0 ;;
             *) exit 1 ;;
         esac
     " >/dev/null 2>&1

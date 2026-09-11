@@ -135,7 +135,7 @@ adb devices | findstr /R /C:"%IP_ADDRESS%.*device$" >nul 2>&1
 exit /b %errorlevel%
 
 :health
-adb -s %IP_ADDRESS% shell "NOW=$(date +%%s); ALIVE=$(cat %REMOTE_ALIVE% 2>/dev/null || echo 0); PID=$(cat %REMOTE_PID% 2>/dev/null || echo 0); STATE=$(cat %REMOTE_STATE% 2>/dev/null); LOOP=$(cat %REMOTE_LOOPSTART% 2>/dev/null || echo 0); [ -n \"$ALIVE\" ] && [ $((NOW - ALIVE)) -le %ALIVE_TIMEOUT% ] && [ -n \"$PID\" ] && kill -0 $PID 2>/dev/null && case \"$STATE\" in MONITORING|WAITING_DEVICE|RECOVERING_DEVICE) true ;; *) exit 1 ;; esac && { [ \"$STATE\" != MONITORING ] || [ $((NOW - LOOP)) -le %LOOP_TIMEOUT% ]; }" >nul 2>&1
+adb -s %IP_ADDRESS% shell "NOW=$(date +%%s); ALIVE=$(cat %REMOTE_ALIVE% 2>/dev/null || echo 0); PID=$(cat %REMOTE_PID% 2>/dev/null || echo 0); STATE=$(cat %REMOTE_STATE% 2>/dev/null); LOOP=$(cat %REMOTE_LOOPSTART% 2>/dev/null || echo 0); [ -n \"$ALIVE\" ] && [ $((NOW - ALIVE)) -le %ALIVE_TIMEOUT% ] && [ -n \"$PID\" ] && kill -0 $PID 2>/dev/null && case \"$STATE\" in MONITORING|WAITING_DEVICE|RECOVERING_DEVICE|SLEEPING) true ;; *) exit 1 ;; esac && { [ \"$STATE\" != MONITORING ] || [ $((NOW - LOOP)) -le %LOOP_TIMEOUT% ]; }" >nul 2>&1
 if errorlevel 1 exit /b 1
 exit /b 0
 
@@ -197,5 +197,5 @@ if errorlevel 1 (
 exit /b 0
 
 :is_screen_on
-adb -s %IP_ADDRESS% shell "dumpsys power" | findstr /I /C:"mWakefulness=Awake" >nul 2>&1
+adb -s %IP_ADDRESS% shell "dumpsys power" | findstr /R /I /C:"mWakefulness=Awake" /C:"mWakefulness=Dreaming" /C:"Display Power: state=ON" >nul 2>&1
 exit /b %errorlevel%

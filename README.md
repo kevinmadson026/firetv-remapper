@@ -8,6 +8,8 @@ A lightweight utility for remapping dedicated application buttons—or any other
 
 - **Fully customizable:** Change the application launched by each button or capture new button event codes to remap other buttons.
 
+- **Sleep-aware monitoring:** Event capture is paused while the Fire TV is asleep and resumes after wake-up. The remote state is written as `SLEEPING`, and the watchdog does not treat that state as a service failure.
+
 - **Default mappings:**
   - Prime Video opens YouTube (`com.google.android.youtube.tv` ).
   - Netflix opens Kodi (`org.xbmc.kodi`).
@@ -158,6 +160,18 @@ APP04_PACKAGE="com.esaba.downloader"           # Hulu button
 ```
 
 ## Running the Remapper
+
+### Sleep/standby behavior
+
+When `dumpsys power` reports that the Fire TV is asleep, `firetv-remapper.sh` does not run `getevent` or process button events. It waits and resumes automatically after the device wakes. You can inspect the state with:
+
+```bash
+adb -s YOUR_FIRE_TV_IP:5555 shell "cat /sdcard/firetv-remapper.state"
+```
+
+The expected values are `MONITORING` while active and `SLEEPING` while paused.
+
+The message `Ignoring PRIMEVIDEO press while another button handler is active` is not present in this package. It was an unnecessary message from a different/local version that attempted to handle events concurrently; event handling here remains sequential.
 
 On Windows, `run.bat` automatically uploads the current `firetv-remapper.sh` file to the Fire TV, normalizes its line endings, grants execution permission, creates the log file, and starts the service. No manual file transfer or remote file preparation is required.
 
