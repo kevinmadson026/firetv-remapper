@@ -12,7 +12,7 @@ color 0A
 
 rem ===== Configuration =====
 rem Replace this address with your Fire TV IP address.
-set "IP_ADDRESS=192.168.1.12:5555"
+set "IP_ADDRESS=192.168.1.14:5555"
 set "CHECK_INTERVAL=5"
 set "OFFLINE_INTERVAL=15"
 set "FAIL_CONFIRMATIONS=3"
@@ -65,6 +65,8 @@ goto start_log_watchdog
 
 :start_log_watchdog
 if not exist "%LOG_WATCHDOG%" goto log_watchdog_missing
+rem Close an older log window so multiple run.bat launches do not duplicate output.
+taskkill /FI "WINDOWTITLE eq FireTV - Real-Time Log Watchdog" /T /F >nul 2>&1
 start "FireTV - Real-Time Log" "%ComSpec%" /k call "%LOG_WATCHDOG%" "%IP_ADDRESS%" "%REMOTE_LOG%"
 goto main_loop
 
@@ -170,9 +172,10 @@ exit /b %errorlevel%
 
 :restart_service
 rem Stop event capture and the old remapper before starting one fresh instance.
-adb -s %IP_ADDRESS% shell "killall getevent 2>/dev/null; OLD=$(cat %REMOTE_PID% 2>/dev/null || echo 0); [ \"$OLD\" != 0 ] && kill $OLD 2>/dev/null || true" >nul 2>&1
+rem Kill every old remapper process and its child workers before starting.
+adb -s %IP_ADDRESS% shell "killall getevent 2>/dev/null; kill_tree(){ for C in $(ps -o PID=,PPID= | awk -v P=$1 '$2==P{print $1}'); do kill_tree $C; done; kill -9 $1 2>/dev/null; }; for P in $(ps -o PID=,ARGS= | awk '/[f]iretv-remapper\.sh/{print $1}'); do kill_tree $P; done; killall getevent 2>/dev/null; rm -f %REMOTE_PID% %REMOTE_STATE% %REMOTE_ALIVE% %REMOTE_LOOPSTART% %REMOTE_LOCK%" >nul 2>&1
 if errorlevel 1 (
-    echo [%TIME%] Warning: could not stop a previous getevent process; continuing.
+    echo [%TIME%] Warning: could not fully stop the previous remapper; continuing.
 )
 
 adb -s %IP_ADDRESS% shell "rm -f %REMOTE_LOCK% %REMOTE_STATE% %REMOTE_ALIVE% %REMOTE_LOOPSTART% %REMOTE_PID%" >nul 2>&1

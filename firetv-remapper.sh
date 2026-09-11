@@ -15,10 +15,10 @@ LOCK_FILE="$BASE_DIR/firetv-remapper.lock"
 ALIVE_FILE="$BASE_DIR/firetv-remapper.alive"
 LOG_TAG="firetv-remapper"
 
-APP01_PACKAGE="com.google.android.youtube.tv" # Prime Video button
-APP02_PACKAGE="org.xbmc.kodi"                  # Netflix button
-APP03_PACKAGE="org.videolan.vlc"               # Disney+ button
-APP04_PACKAGE="com.esaba.downloader"           # Hulu button
+APP01_PACKAGE="org.smarttube.stable"
+APP02_PACKAGE="com.lazerplayer.app"
+APP03_PACKAGE="com.instantbits.cast.receiver"
+APP04_PACKAGE="de.belu.appstarter"
 
 PRIME_PACKAGE="com.amazon.firebat"
 NETFLIX_PACKAGE="com.netflix.ninja"
@@ -39,30 +39,44 @@ write_state() {
 }
 
 is_device_awake() {
-    dumpsys power 2>/dev/null | grep -Eq \
+    POWER_STATE=$(dumpsys power 2>/dev/null)
+
+    # mWakefulness is authoritative.  Some Fire OS versions can leave a
+    # stale "Display Power: state=ON" line while the device is already
+    # Asleep; checking that line first would incorrectly restart getevent.
+    echo "$POWER_STATE" | grep -Eq 'mWakefulness=(Asleep|Dozing)' && return 1
+    echo "$POWER_STATE" | grep -Eq \
         'mWakefulness=Awake|mWakefulness=Dreaming|Display Power: state=ON'
 }
 
 stop_all_getevent() {
-    # killall works on Fire OS and terminates all previous getevent processes.
+    # Kill twice without waiting: the first call interrupts blocked readers and
+    # the second catches a short-lived listener spawned during a race.
     killall getevent >/dev/null 2>&1
-    sleep 1
     killall getevent >/dev/null 2>&1
 }
 
 stop_previous_instance() {
     OLD_PID=$(cat "$PID_FILE" 2>/dev/null)
 
-    # Terminates all old copies of the remapper itself, not only the one in the PID file.
+    kill_process_tree() {
+        for CHILD_PID in $(ps -o PID= -o PPID= 2>/dev/null | awk -v P="$1" '$2 == P {print $1}'); do
+            kill_process_tree "$CHILD_PID"
+            kill "$CHILD_PID" 2>/dev/null
+        done
+        kill "$1" 2>/dev/null
+    }
+
+    # Terminate every old copy and its workers, not only the PID in the file.
     for REMAPPER_PID in $(ps 2>/dev/null | awk '$0 ~ /[f]iretv-remapper\.sh/ {print $1}'); do
         if [ "$REMAPPER_PID" != "$$" ]; then
             log "Terminating previous remapper (PID $REMAPPER_PID)."
-            kill "$REMAPPER_PID" 2>/dev/null
+            kill_process_tree "$REMAPPER_PID"
         fi
     done
 
     if [ -n "$OLD_PID" ] && [ "$OLD_PID" != "$$" ]; then
-        kill "$OLD_PID" 2>/dev/null
+        kill_process_tree "$OLD_PID"
     fi
 
     sleep 1
@@ -102,7 +116,7 @@ cleanup() {
     CURRENT_PID=$(cat "$PID_FILE" 2>/dev/null)
     # The old instance must not delete the files that already belong to the new one.
     if [ "$CURRENT_PID" = "$$" ]; then
-        kill "$PULSE_PID" "$GUARD_PID" 2>/dev/null
+        kill "$PULSE_PID" "$GUARD_PID" "$SLEEP_GUARD_PID" 2>/dev/null
         write_state "STOPPED"
         rm -f "$ALIVE_FILE" "$HEARTBEAT_FILE" "$PID_FILE" "$LOCK_FILE"
     fi
@@ -121,6 +135,15 @@ closeapps() {
     am force-stop "$DISNEY_PACKAGE" >/dev/null 2>&1
     am force-stop "com.amazon.venezia" >/dev/null 2>&1
 }
+
+close_venezia() {
+    # Venezia is the Fire TV app store. Keep it from remaining in the
+    # foreground/background after the remapper starts or the device wakes.
+    am force-stop "com.amazon.venezia" >/dev/null 2>&1
+}
+
+close_venezia
+log "Amazon Appstore (com.amazon.venezia) force-stopped."
 
 find_target_device() {
     getevent -i 2>/dev/null | awk '
@@ -165,6 +188,40 @@ stuck_guard_worker() {
 }
 stuck_guard_worker &
 GUARD_PID=$!
+
+# ---------------------------------------------------------------------------
+# SLEEP GUARD
+# Power state can change while getevent is blocked waiting for input.  The
+# main loop cannot observe that transition until getevent returns, so this
+# worker polls power independently and interrupts every getevent immediately.
+# It deliberately does not kill arbitrary shell processes: only getevent
+# listeners owned by this service are terminated, avoiding damage to Fire OS.
+# ---------------------------------------------------------------------------
+sleep_guard_worker() {
+    LAST_POWER_STATE=""
+    while true; do
+        if is_device_awake; then
+            if [ "$LAST_POWER_STATE" = "SLEEPING" ]; then
+                log "Fire TV woke up; restarting remote monitoring."
+                close_venezia
+                log "Amazon Appstore (com.amazon.venezia) force-stopped after wake."
+                stop_all_getevent
+                write_state "WAITING_DEVICE"
+            fi
+            LAST_POWER_STATE="AWAKE"
+        else
+            if [ "$LAST_POWER_STATE" != "SLEEPING" ]; then
+                log "Fire TV entered sleep; stopping all getevent listeners immediately."
+                stop_all_getevent
+                write_state "SLEEPING"
+            fi
+            LAST_POWER_STATE="SLEEPING"
+        fi
+        sleep 1
+    done
+}
+sleep_guard_worker &
+SLEEP_GUARD_PID=$!
 
 # ---------------------------------------------------------------------------
 
